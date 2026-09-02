@@ -65,8 +65,7 @@ export async function GET(request: NextRequest) {
       Promise.all((taskLists.data.items ?? []).map(l =>
         tsk.tasks.list({
           tasklist: l.id!,
-            showCompleted: true,   // debug: ขอดูตัวที่ done แล้วด้วย
-          showHidden: true,      // debug: รวมตัวที่ถูกซ่อน
+          showCompleted: false,
           maxResults: 100,
         })
         .then(r => (r.data.items ?? [])
