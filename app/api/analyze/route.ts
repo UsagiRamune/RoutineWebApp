@@ -2,6 +2,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { geminiProvider } from '@/lib/ai/gemini'
 import { AiProvider } from '@/lib/ai/provider'
+import { dateKeyOffset } from '@/lib/dates'
 import { NextResponse } from 'next/server'
 
 // จุดสลับ provider — อนาคตเพิ่ม anthropic.ts แล้วเปลี่ยนตรงนี้จุดเดียว
@@ -20,9 +21,7 @@ export async function POST(request: Request) {
   }
 
   const { days = 7 } = await request.json().catch(() => ({}))
-  const from = new Date()
-  from.setDate(from.getDate() - Math.min(days, 90)) // จำกัด 90 วัน กัน prompt บวม
-  const fromStr = from.toLocaleDateString('sv-SE')
+  const fromStr = dateKeyOffset(-Math.min(days, 90)) // จำกัด 90 วัน กัน prompt บวม
 
   const [entries, completions, metrics, categories] = await Promise.all([
     supabase.from('time_entries')

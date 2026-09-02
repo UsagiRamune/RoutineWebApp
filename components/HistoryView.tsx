@@ -11,6 +11,7 @@ import {
   ItemCompletionWithItem, TimeEntryWithRoutine, DetailTopic,
 } from '@/lib/supabase/types'
 import { ArrowLeft, X, Flame } from 'lucide-react'
+import { TZ, dateKeyOffset } from '@/lib/dates'
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid,
@@ -67,7 +68,7 @@ export default function HistoryView({
       }
       return [...byMonth.keys()].sort().map(k => ({
         key: k,
-        label: new Date(k + '-01').toLocaleDateString('th-TH', { month: 'short' }),
+        label: new Date(k + '-01').toLocaleDateString('th-TH', { month: 'short', timeZone: TZ }),
         hours: +((byMonth.get(k) ?? 0) / 60).toFixed(1),
         weight: weightByMonth.get(k) ?? null,
       }))
@@ -77,12 +78,10 @@ export default function HistoryView({
     const days = view === 'week' ? 7 : 30
     const out = []
     for (let i = days - 1; i >= 0; i--) {
-      const d = new Date()
-      d.setDate(d.getDate() - i)
-      const key = d.toLocaleDateString('sv-SE')
+      const key = dateKeyOffset(-i)
       out.push({
         key,
-        label: d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }),
+        label: new Date(key).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', timeZone: TZ }),
         hours: +((byDay.get(key) ?? 0) / 60).toFixed(1),
         weight: weightByDay.get(key) ?? null,
       })
@@ -108,9 +107,7 @@ export default function HistoryView({
       for (const r of cat.routines.filter(x => x.is_active)) {
         let days = 0
         for (let i = 0; ; i++) {
-          const d = new Date()
-          d.setDate(d.getDate() - i)
-          const key = d.toLocaleDateString('sv-SE')
+          const key = dateKeyOffset(-i)
           if (activeByDay.get(key)?.has(r.id)) days++
           else if (i === 0) continue // วันนี้ยังไม่ทำ ไม่ตัดสตรีค ไปเช็คเมื่อวานต่อ
           else break
@@ -185,7 +182,7 @@ export default function HistoryView({
 
   function fmtHHMM(iso: string) {
     return new Date(iso).toLocaleTimeString('th-TH',
-      { hour: '2-digit', minute: '2-digit' })
+      { hour: '2-digit', minute: '2-digit', timeZone: TZ })
   }
 
   return (
@@ -302,7 +299,7 @@ export default function HistoryView({
               <p className="text-xs text-[#7C8394]">
                 ล่าสุด {latestMetric.weight_kg} กก.
                 ({new Date(latestMetric.date).toLocaleDateString('th-TH',
-                  { day: 'numeric', month: 'short' })})
+                  { day: 'numeric', month: 'short', timeZone: TZ })})
               </p>
             )}
           </div>
@@ -331,7 +328,7 @@ export default function HistoryView({
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-medium">
                 {new Date(selectedDay).toLocaleDateString('th-TH',
-                  { weekday: 'long', day: 'numeric', month: 'long' })}
+                  { weekday: 'long', day: 'numeric', month: 'long', timeZone: TZ })}
               </p>
               <button onClick={() => setSelectedDay(null)}
                 className="text-[#7C8394]"><X size={16} /></button>

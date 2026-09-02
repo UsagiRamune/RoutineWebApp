@@ -24,6 +24,8 @@ export async function GET(request: NextRequest) {
 
     const days = Math.min(31, Math.max(1,
     parseInt(request.nextUrl.searchParams.get('days') ?? '7')))
+    // ตั้งใจใช้เที่ยงคืน UTC (ไม่ได้ pin Asia/Bangkok) — กว้างกว่าที่ต้องการแค่ไม่กี่ชั่วโมง
+    // ซึ่งแค่ทำให้ช่วงเวลาที่ query กว้างขึ้นเล็กน้อย ไม่กระทบความถูกต้อง
     const dayStart = new Date(new Date().setHours(0, 0, 0, 0))
     const horizon = new Date(dayStart.getTime() + days * 86400000)
 

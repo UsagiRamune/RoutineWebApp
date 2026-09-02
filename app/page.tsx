@@ -2,11 +2,12 @@ import { createClient } from '@/lib/supabase/server'
 import { CategoryWithRoutines } from '@/lib/supabase/types'
 import TodayView from '@/components/TodayView'
 import RealtimeRefresher from '@/components/RealtimeRefresher'
+import { todayKey } from '@/lib/dates'
 
 export default async function Home() {
   const supabase = await createClient()
 
-  const today = new Date().toLocaleDateString('sv-SE') // ได้ "2026-09-01" ตาม timezone เครื่อง
+  const today = todayKey() // ได้ "2026-09-01" ตาม Asia/Bangkok เสมอ ไม่ว่า server จะรัน timezone ไหน
 
   const { data: categories, error } = await supabase
     .from('routine_categories')

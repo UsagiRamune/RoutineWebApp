@@ -12,6 +12,7 @@ import { LogOut, Play, Square, History, Plus, X, Pencil } from 'lucide-react'
 import Link from 'next/link'
 import EditRoutinePanel from '@/components/EditRoutinePanel'
 import CalendarPanel from '@/components/CalendarPanel'
+import { TZ } from '@/lib/dates'
 
 interface Props {
   categories: CategoryWithRoutines[]
@@ -55,7 +56,7 @@ export default function TodayView({ categories, today }: Props) {
 
   function fmtClock(iso: string) {
     return new Date(iso).toLocaleTimeString('th-TH', {
-      hour: '2-digit', minute: '2-digit',
+      hour: '2-digit', minute: '2-digit', timeZone: TZ,
     })
   }
 
@@ -143,14 +144,14 @@ export default function TodayView({ categories, today }: Props) {
   }
 
   async function logout() {
-    await supabase.auth.signOut()
+    await supabase.auth.signOut({ scope: 'local' })
     router.push('/login')
   }
 
   // ---------- render ----------
 
   const dateLabel = new Date().toLocaleDateString('th-TH', {
-    weekday: 'long', day: 'numeric', month: 'long',
+    weekday: 'long', day: 'numeric', month: 'long', timeZone: TZ,
   })
 
   return (

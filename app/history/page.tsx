@@ -1,6 +1,7 @@
 // หน้าประวัติ — ดึงข้อมูลตามช่วงเวลาที่เลือก แล้วส่งให้ HistoryView
 import { createClient } from '@/lib/supabase/server'
 import HistoryView from '@/components/HistoryView'
+import { todayKey, dateKeyOffset } from '@/lib/dates'
 
 // searchParams ใน Next.js 15 เป็น Promise ต้อง await
 interface Props {
@@ -12,11 +13,9 @@ export default async function History({ searchParams }: Props) {
   const view = (['week', 'month', 'year'].includes(viewParam ?? '')
     ? viewParam : 'week') as 'week' | 'month' | 'year'
 
-  // ช่วงวันที่ตามมุมมอง (+1 กันเหลื่อม timezone)
+  // ช่วงวันที่ตามมุมมอง
   const days = view === 'week' ? 7 : view === 'month' ? 30 : 365
-  const from = new Date()
-  from.setDate(from.getDate() - days)
-  const fromStr = from.toLocaleDateString('sv-SE')
+  const fromStr = dateKeyOffset(-days)
 
   const supabase = await createClient()
 
@@ -33,7 +32,7 @@ export default async function History({ searchParams }: Props) {
     supabase.from('routine_categories').select('*, routines(*)').order('sort_order'),
   ])
 
-  const today = new Date().toLocaleDateString('sv-SE')
+  const today = todayKey()
 
   return (
     <HistoryView

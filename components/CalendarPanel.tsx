@@ -3,6 +3,7 @@
 // แผงปฏิทิน: อีเวนต์ 7 วันข้างหน้า + เพิ่ม/ลบ (sync ตรงกับ Google Calendar)
 import { useEffect, useState, useCallback } from 'react'
 import { CalendarDays, CheckSquare, Plus, X } from 'lucide-react'
+import { TZ } from '@/lib/dates'
 
 interface CalEvent {
   id: string
@@ -111,13 +112,13 @@ export default function CalendarPanel() {
 
   function fmtEvent(e: CalEvent) {
     const d = new Date(e.start)
-    const day = d.toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short' })
+    const day = d.toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', timeZone: TZ })
     if (e.allDay) return day
-    return `${day} ${d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}`
+    return `${day} ${d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: TZ })}`
   }
 
   function fmtTaskDue(due: string) {
-    return new Date(due).toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short' })
+    return new Date(due).toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', timeZone: TZ })
   }
 
   const inputCls = 'bg-[#14171F] border border-[#2A2F3D] rounded-lg px-2 py-1.5 text-xs outline-none'
