@@ -8,8 +8,10 @@ import { createClient } from '@/lib/supabase/client'
 import {
   CategoryWithRoutines, TimeEntry, DetailTopic,
 } from '@/lib/supabase/types'
-import { LogOut, Play, Square, History, Plus, X } from 'lucide-react'
+import { LogOut, Play, Square, History, Plus, X, Pencil } from 'lucide-react'
 import Link from 'next/link'
+import EditRoutinePanel from '@/components/EditRoutinePanel'
+import CalendarPanel from '@/components/CalendarPanel'
 
 interface Props {
   categories: CategoryWithRoutines[]
@@ -30,6 +32,8 @@ export default function TodayView({ categories, today }: Props) {
   // ---------- optimistic checklist ----------
   // เก็บสถานะติ๊ก "ทับ" ข้อมูลจาก server: กดปุ๊บเปลี่ยนปุ๊บ ไม่รอฐานข้อมูล
   const [optimisticTicks, setOptimisticTicks] = useState<Record<string, boolean>>({})
+  const [editing, setEditing] = useState<string | null>(null) // id ของ routine ที่กำลังแก้
+  const [newName, setNewName] = useState<Record<string, string>>({}) // ช่องเพิ่ม routine ต่อหมวด
 
   function isDone(itemId: string, serverDone: boolean) {
     return optimisticTicks[itemId] ?? serverDone
@@ -84,6 +88,13 @@ export default function TodayView({ categories, today }: Props) {
   async function clockOut(entryId: string) {
     await supabase.from('time_entries')
       .update({ clock_out: new Date().toISOString() }).eq('id', entryId)
+  }
+
+  async function addRoutine(categoryId: string) {
+    const name = (newName[categoryId] ?? '').trim()
+    if (!name) return
+    await supabase.from('routines').insert({ category_id: categoryId, name })
+    setNewName((p) => ({ ...p, [categoryId]: '' }))
   }
 
   // ---------- details (topic/subtopic) ----------
@@ -162,6 +173,7 @@ export default function TodayView({ categories, today }: Props) {
             </button>
           </div>
         </div>
+        <CalendarPanel />
 
         {categories.map((cat) => (
           <section key={cat.id} className="mb-8">
@@ -178,7 +190,11 @@ export default function TodayView({ categories, today }: Props) {
                 return (
                   <div key={routine.id}
                     className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4 mb-3">
-                    <p className="font-medium text-sm mb-3">{routine.name}</p>
+                    <div className="flex items-center gap-2 mb-3">
+                      <p className="font-medium text-sm">{routine.name}</p>
+                      <button onClick={() => setEditing(editing === routine.id ? null : routine.id)}
+                        className="text-[#7C8394]"><Pencil size={12} /></button>
+                    </div>
                     {items.map((item) => {
                       const serverDone = item.item_completions?.some(
                         (c) => c.date === today
@@ -203,6 +219,10 @@ export default function TodayView({ categories, today }: Props) {
                         </button>
                       )
                     })}
+                    {editing === routine.id && (
+                      <EditRoutinePanel routine={routine} kind={cat.kind}
+                        today={today} onClose={() => setEditing(null)} />
+                    )}
                   </div>
                 )
               }
@@ -222,7 +242,11 @@ export default function TodayView({ categories, today }: Props) {
 
                   {/* หัว: ชื่อ + timer ใหญ่ + ปุ่มเดียว */}
                   <div className="flex items-center justify-between mb-1">
-                    <p className="font-medium text-sm">{routine.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-sm">{routine.name}</p>
+                      <button onClick={() => setEditing(editing === routine.id ? null : routine.id)}
+                        className="text-[#7C8394]"><Pencil size={12} /></button>
+                    </div>
                     {running ? (
                       <button onClick={() => clockOut(running.id)}
                         className="flex items-center gap-2 text-sm font-semibold
@@ -313,9 +337,24 @@ export default function TodayView({ categories, today }: Props) {
                       ))}
                     </div>
                   ))}
+                  {editing === routine.id && (
+                    <EditRoutinePanel routine={routine} kind={cat.kind}
+                      today={today} onClose={() => setEditing(null)} />
+                  )}
                 </div>
               )
             })}
+
+            <div className="flex gap-2">
+              <input
+                value={newName[cat.id] ?? ''}
+                onChange={(e) => setNewName((p) => ({ ...p, [cat.id]: e.target.value }))}
+                onKeyDown={(e) => e.key === 'Enter' && addRoutine(cat.id)}
+                placeholder={`+ เพิ่ม routine ใน${cat.name}...`}
+                className="flex-1 bg-transparent border border-dashed border-[#2A2F3D]
+                  rounded-xl px-4 py-2.5 text-sm outline-none
+                  focus:border-[#7C8394] placeholder:text-[#7C8394]" />
+            </div>
           </section>
         ))}
       </div>

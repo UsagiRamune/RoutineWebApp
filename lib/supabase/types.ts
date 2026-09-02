@@ -16,6 +16,7 @@ export interface Routine {
     description: string | null
     is_active: boolean
     sort_order: number
+    default_target_minutes: number | null
     created_at: string
 }
 
@@ -68,6 +69,15 @@ export interface DetailTopic {
   subs: DetailSub[]
 }
 
+export interface BodyMetric {
+  id: string
+  date: string
+  weight_kg: number | null
+  height_cm: number | null
+  note: string | null
+  created_at: string
+}
+
 export interface RoutineWithDetails extends Routine {
     routine_items: RoutineItem[]
     time_entries: TimeEntry[]
@@ -76,4 +86,19 @@ export interface RoutineWithDetails extends Routine {
 
 export interface CategoryWithRoutines extends RoutineCategory {
     routines: RoutineWithDetails[]
+}
+
+export interface TimeEntryWithRoutine extends TimeEntry {
+  routines: {
+    name: string
+    category_id: string
+    default_target_minutes: number | null
+  } | null
+}
+
+export interface ItemCompletionWithItem extends ItemCompletion {
+  routine_items: {
+    name: string
+    routine_id: string
+  } | null
 }
