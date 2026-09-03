@@ -3,15 +3,12 @@
 // UI หน้า "วันนี้" — checklist (optimistic), timer + session พร้อม timestamp,
 // รายละเอียดแบบ topic/subtopic เพิ่มลบอิสระ
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
   CategoryWithRoutines, TimeEntry, DetailTopic,
 } from '@/lib/supabase/types'
-import { LogOut, Play, Square, History, Plus, X, Pencil } from 'lucide-react'
-import Link from 'next/link'
+import { Play, Square, Plus, X, Pencil } from 'lucide-react'
 import EditRoutinePanel from '@/components/EditRoutinePanel'
-import CalendarPanel from '@/components/CalendarPanel'
 import { TZ } from '@/lib/dates'
 
 interface Props {
@@ -20,7 +17,6 @@ interface Props {
 }
 
 export default function TodayView({ categories, today }: Props) {
-  const router = useRouter()
   const supabase = createClient()
 
   // นาฬิกาเดินทุกวินาที
@@ -143,11 +139,6 @@ export default function TodayView({ categories, today }: Props) {
     ))
   }
 
-  async function logout() {
-    await supabase.auth.signOut({ scope: 'local' })
-    router.push('/login')
-  }
-
   // ---------- render ----------
 
   const dateLabel = new Date().toLocaleDateString('th-TH', {
@@ -156,25 +147,12 @@ export default function TodayView({ categories, today }: Props) {
 
   return (
     <main className="min-h-screen bg-[#14171F] text-[#EDEAE0] pb-16">
-      <div className="max-w-lg mx-auto px-4 pt-8">
+      <div className="max-w-3xl mx-auto px-4 pt-8">
 
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-xl font-semibold">วันนี้</h1>
-            <p className="text-sm text-[#7C8394]">{dateLabel}</p>
-          </div>
-          <div className="flex gap-2">
-            <Link href="/history"
-              className="p-2 rounded-lg border border-[#2A2F3D] text-[#7C8394]">
-              <History size={18} />
-            </Link>
-            <button onClick={logout}
-              className="p-2 rounded-lg border border-[#2A2F3D] text-[#7C8394]">
-              <LogOut size={18} />
-            </button>
-          </div>
+        <div className="mb-6">
+          <h1 className="text-xl font-semibold">วันนี้</h1>
+          <p className="text-sm text-[#7C8394]">{dateLabel}</p>
         </div>
-        <CalendarPanel />
 
         {categories.map((cat) => (
           <section key={cat.id} className="mb-8">

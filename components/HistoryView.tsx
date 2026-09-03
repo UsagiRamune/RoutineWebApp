@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 import {
   BodyMetric, CategoryWithRoutines, DailyTarget,
   ItemCompletionWithItem, TimeEntryWithRoutine, DetailTopic,
+  FoodEntry, WaterEntry,
 } from '@/lib/supabase/types'
 import { ArrowLeft, X, Flame } from 'lucide-react'
 import { TZ, dateKeyOffset } from '@/lib/dates'
@@ -28,10 +29,13 @@ interface Props {
   targets: DailyTarget[]
   metrics: BodyMetric[]
   categories: CategoryWithRoutines[]
+  foodEntries: FoodEntry[]
+  waterEntries: WaterEntry[]
 }
 
 export default function HistoryView({
   view, today, entries, completions, targets, metrics, categories,
+  foodEntries, waterEntries,
 }: Props) {
     const router = useRouter()
     const supabase = createClient()
@@ -47,13 +51,17 @@ export default function HistoryView({
       (new Date(e.clock_out).getTime() - new Date(e.clock_in).getTime()) / 60000))
   }
 
-  // รวมนาทีต่อวัน + น้ำหนัก → data ให้กราฟ
+  // รวมนาทีต่อวัน + น้ำหนัก + แคลอรี่ → data ให้กราฟ
   const chartData = useMemo(() => {
     const byDay = new Map<string, number>()
     for (const e of entries) {
       byDay.set(e.date, (byDay.get(e.date) ?? 0) + minutesOf(e))
     }
     const weightByDay = new Map(metrics.map(m => [m.date, m.weight_kg]))
+    const caloriesByDay = new Map<string, number>()
+    for (const f of foodEntries) {
+      caloriesByDay.set(f.date, (caloriesByDay.get(f.date) ?? 0) + (f.calories ?? 0))
+    }
 
     if (view === 'year') {
       // รายปี: ยุบเป็นรายเดือน
@@ -66,11 +74,17 @@ export default function HistoryView({
       for (const m of metrics) {
         if (m.weight_kg != null) weightByMonth.set(m.date.slice(0, 7), m.weight_kg)
       }
+      const caloriesByMonth = new Map<string, number>()
+      for (const [d, cal] of caloriesByDay) {
+        const key = d.slice(0, 7)
+        caloriesByMonth.set(key, (caloriesByMonth.get(key) ?? 0) + cal)
+      }
       return [...byMonth.keys()].sort().map(k => ({
         key: k,
         label: new Date(k + '-01').toLocaleDateString('th-TH', { month: 'short', timeZone: TZ }),
         hours: +((byMonth.get(k) ?? 0) / 60).toFixed(1),
         weight: weightByMonth.get(k) ?? null,
+        calories: caloriesByMonth.get(k) ?? null,
       }))
     }
 
@@ -84,10 +98,11 @@ export default function HistoryView({
         label: new Date(key).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', timeZone: TZ }),
         hours: +((byDay.get(key) ?? 0) / 60).toFixed(1),
         weight: weightByDay.get(key) ?? null,
+        calories: caloriesByDay.get(key) ?? null,
       })
     }
     return out
-  }, [entries, metrics, view])
+  }, [entries, metrics, foodEntries, view])
 
   // สตรีคต่อ routine: นับวันติดกันถอยหลังจากวันนี้ที่มี "ร่องรอยการทำ"
   const streaks = useMemo(() => {
@@ -124,6 +139,19 @@ export default function HistoryView({
   const dayCompletions = selectedDay
     ? completions.filter(c => c.date === selectedDay)
     : []
+  const dayFood = selectedDay
+    ? foodEntries.filter(f => f.date === selectedDay)
+    : []
+  const dayWater = selectedDay
+    ? waterEntries.filter(w => w.date === selectedDay)
+        .sort((a, b) => a.created_at.localeCompare(b.created_at))
+    : []
+  const dayNutTotals = dayFood.reduce((acc, f) => ({
+    cal: acc.cal + (f.calories ?? 0),
+    protein: acc.protein + (f.protein_g ?? 0),
+    carbs: acc.carbs + (f.carbs_g ?? 0),
+    fat: acc.fat + (f.fat_g ?? 0),
+  }), { cal: 0, protein: 0, carbs: 0, fat: 0 })
 
   // ---------- actions ----------
 
@@ -187,7 +215,7 @@ export default function HistoryView({
 
   return (
     <main className="min-h-screen bg-[#14171F] text-[#EDEAE0] pb-16">
-      <div className="max-w-lg mx-auto px-4 pt-8">
+      <div className="max-w-3xl mx-auto px-4 pt-8">
 
         {/* header + toggle */}
         <div className="flex items-center justify-between mb-6">
@@ -212,9 +240,11 @@ export default function HistoryView({
         {/* chart */}
         <div className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4 mb-4">
           <p className="text-xs text-[#7C8394] mb-2">
-            ชั่วโมงที่จับเวลา{metrics.length > 0 && ' + น้ำหนัก (เส้น)'}
+            ชั่วโมงที่จับเวลา
+            {metrics.length > 0 && ' + น้ำหนัก (เส้นม่วง)'}
+            {foodEntries.length > 0 && ' + แคลอรี่ (เส้นส้ม)'}
           </p>
-          <div className="h-56">
+          <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={chartData}
                 onClick={(s) => {
@@ -232,6 +262,8 @@ export default function HistoryView({
                 <YAxis yAxisId="w" orientation="right" stroke="#9B7EDE"
                   fontSize={10} tickLine={false} axisLine={false} width={30}
                   domain={['dataMin - 2', 'dataMax + 2']} hide={metrics.length === 0} />
+                <YAxis yAxisId="c" orientation="right" hide
+                  domain={[0, 'dataMax + 300']} />
                 <Tooltip
                   position={{ y: 10 }}
                   isAnimationActive={false}
@@ -241,6 +273,8 @@ export default function HistoryView({
                 <Bar yAxisId="h" dataKey="hours" name="ชม."
                   fill="#4FC1E0" radius={[4, 4, 0, 0]} cursor="pointer" />
                 <Line yAxisId="w" dataKey="weight" name="กก." stroke="#9B7EDE"
+                  strokeWidth={2} dot={{ r: 3 }} connectNulls />
+                <Line yAxisId="c" dataKey="calories" name="kcal" stroke="#F0A345"
                   strokeWidth={2} dot={{ r: 3 }} connectNulls />
               </ComposedChart>
             </ResponsiveContainer>
@@ -334,8 +368,19 @@ export default function HistoryView({
                 className="text-[#7C8394]"><X size={16} /></button>
             </div>
 
-            {dayEntries.length === 0 && dayCompletions.length === 0 && (
+            {dayEntries.length === 0 && dayCompletions.length === 0
+              && dayFood.length === 0 && dayWater.length === 0 && (
               <p className="text-xs text-[#7C8394]">วันนี้ไม่มีบันทึก</p>
+            )}
+
+            {(dayFood.length > 0 || dayWater.length > 0) && (
+              <p className="text-xs text-[#7C8394] mb-2">
+                โภชนาการ: {Math.round(dayNutTotals.cal)} kcal
+                {' '}(P{dayNutTotals.protein.toFixed(0)} C{dayNutTotals.carbs.toFixed(0)} F{dayNutTotals.fat.toFixed(0)})
+                {dayWater.length > 0 && (
+                  <> · น้ำ {dayWater.length} แก้ว ({fmtHHMM(dayWater[0].created_at)}–{fmtHHMM(dayWater[dayWater.length - 1].created_at)})</>
+                )}
+              </p>
             )}
 
             {dayEntries.map(e => (

@@ -102,3 +102,89 @@ export interface ItemCompletionWithItem extends ItemCompletion {
     routine_id: string
   } | null
 }
+
+export interface Module {
+  key: string
+  name: string
+  enabled: boolean
+  sort_order: number
+  settings: Record<string, unknown> | null
+}
+
+// ---------- nutrition ----------
+
+export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'other'
+
+export interface FoodEntry {
+  id: string
+  date: string
+  meal: MealType
+  name: string
+  calories: number | null
+  protein_g: number | null
+  carbs_g: number | null
+  fat_g: number | null
+  note: string | null
+  created_at: string
+}
+
+export interface WaterEntry {
+  id: string
+  date: string
+  created_at: string
+}
+
+export type SupplementSlot = 'wake' | 'sleep' | 'workout' | 'anytime'
+
+export interface Supplement {
+  id: string
+  name: string
+  dose: string | null
+  slot: SupplementSlot
+  is_active: boolean
+  sort_order: number
+  created_at: string
+}
+
+export interface SupplementLog {
+  id: string
+  supplement_id: string
+  date: string
+  taken_at: string
+}
+
+export interface IfSettings {
+  id: number
+  enabled: boolean
+  eat_start: string
+  eat_end: string
+}
+
+export type NutritionPlan = 'cut' | 'normal' | 'bulk'
+
+export interface NutritionProfile {
+  id: number
+  plan: NutritionPlan
+  daily_calories: number | null
+  daily_protein_g: number | null
+  daily_water_glasses: number
+  ai_rationale: string | null
+  updated_at: string
+}
+
+// ---------- health (manual entry only) ----------
+
+// เก็บ union เดิมไว้เผื่อแถวเก่าจากตอนยังมี sync (schema ไม่เปลี่ยน) แต่โค้ดฝั่งแอปเขียนแค่ 'manual' แล้ว
+export type HealthSource = 'sync' | 'manual'
+
+export interface HealthDaily {
+  id: string
+  date: string
+  steps: number | null
+  calories_burned: number | null
+  active_minutes: number | null
+  resting_hr: number | null
+  sleep_minutes: number | null
+  source: HealthSource
+  synced_at: string | null
+}
