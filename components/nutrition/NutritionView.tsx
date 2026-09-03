@@ -6,19 +6,20 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
-  FoodEntry, WaterEntry, IfSettings, NutritionProfile,
+  FoodEntry, WaterEntry, WaterContainer, IfSettings, NutritionProfile,
   MealType, NutritionPlan,
 } from '@/lib/supabase/types'
 import { ifStatus, fmtRemaining } from '@/lib/nutrition'
+import { remainingInContainer } from '@/lib/water'
 import { TZ } from '@/lib/dates'
 import { GlassWater, Plus, X, Trash2, Sparkles } from 'lucide-react'
 import Toggle from '@/components/ui/Toggle'
-import WaterReminderBanner from '@/components/WaterReminderBanner'
 
 interface Props {
   today: string
   entries: FoodEntry[]
   waterEntries: WaterEntry[]
+  containers: WaterContainer[]
   ifSettings: IfSettings | null
   profile: NutritionProfile | null
 }
@@ -60,7 +61,7 @@ const CONFIDENCE_COLOR: Record<string, string> = {
 }
 
 export default function NutritionView({
-  today, entries, waterEntries, ifSettings, profile,
+  today, entries, waterEntries, containers, ifSettings, profile,
 }: Props) {
   const supabase = createClient()
   const router = useRouter()
@@ -155,26 +156,65 @@ export default function NutritionView({
     await supabase.from('food_entries').delete().eq('id', id)
   }
 
-  // ---------- water ----------
+  // ---------- water (ml) ----------
 
-  const [optimisticEntries, setOptimisticEntries] = useState<{ id: string; created_at: string }[]>([])
+  interface OptimisticWater { id: string; ml: number; container: string | null; created_at: string }
+  const [optimisticEntries, setOptimisticEntries] = useState<OptimisticWater[]>([])
   useEffect(() => { setOptimisticEntries([]) }, [waterEntries])
 
   const allWaterEntries = [...waterEntries, ...optimisticEntries]
-  const glassesToday = allWaterEntries.length
-  const goalGlasses = profile?.daily_water_glasses ?? 10
-  const overGlasses = glassesToday - goalGlasses
-  const lastDrinkAt = allWaterEntries.length > 0
-    ? allWaterEntries[allWaterEntries.length - 1].created_at : null
+  const currentMl = allWaterEntries.reduce((s, w) => s + (w.ml ?? 0), 0)
+  const targetMl = profile?.daily_water_ml ?? 4000
+  const overMl = currentMl - targetMl
+  const remainingHint = overMl < 0 ? remainingInContainer(-overMl, containers) : null
 
-  async function addGlass() {
-    setOptimisticEntries(p => [...p, { id: `temp-${Date.now()}`, created_at: new Date().toISOString() }])
-    await supabase.from('water_entries').insert({ date: today })
+  async function addWater(ml: number, container: string | null) {
+    if (ml <= 0) return
+    setOptimisticEntries(p => [...p, {
+      id: `temp-${Date.now()}`, ml, container, created_at: new Date().toISOString(),
+    }])
+    await supabase.from('water_entries').insert({ date: today, ml, container })
   }
 
-  async function removeGlass(id: string) {
+  async function removeWater(id: string) {
     if (id.startsWith('temp-')) return
     await supabase.from('water_entries').delete().eq('id', id)
+  }
+
+  const [manualMlOpen, setManualMlOpen] = useState(false)
+  const [manualMl, setManualMl] = useState('')
+
+  async function saveManualMl() {
+    const ml = Math.max(0, parseInt(manualMl) || 0)
+    if (ml <= 0) return
+    await addWater(ml, null)
+    setManualMl('')
+    setManualMlOpen(false)
+  }
+
+  // ---------- จัดการภาชนะ ----------
+
+  const [containerManageOpen, setContainerManageOpen] = useState(false)
+  const [newContainer, setNewContainer] = useState({ name: '', ml: '' })
+
+  async function addContainer() {
+    const ml = Math.max(1, parseInt(newContainer.ml) || 0)
+    if (!newContainer.name.trim() || ml <= 0) return
+    await supabase.from('water_containers').insert({
+      name: newContainer.name.trim(), ml, sort_order: containers.length + 1,
+    })
+    setNewContainer({ name: '', ml: '' })
+  }
+  async function editContainer(id: string, field: 'name' | 'ml', value: string) {
+    if (field === 'ml') {
+      const ml = Math.max(1, parseInt(value) || 0)
+      if (ml > 0) await supabase.from('water_containers').update({ ml }).eq('id', id)
+    } else {
+      if (value.trim()) await supabase.from('water_containers').update({ name: value.trim() }).eq('id', id)
+    }
+  }
+  async function removeContainer(id: string) {
+    await supabase.from('water_containers').update({ is_active: false }).eq('id', id)
   }
 
   // ---------- intermittent fasting ----------
@@ -228,10 +268,6 @@ export default function NutritionView({
 
   return (
     <main className="min-h-screen bg-[#14171F] text-[#EDEAE0] pb-16">
-      <WaterReminderBanner
-        glassesToday={glassesToday} goalGlasses={goalGlasses}
-        lastDrinkAt={lastDrinkAt} onLog={addGlass} />
-
       <div className="max-w-5xl mx-auto px-4 pt-8">
         <h1 className="text-xl font-semibold mb-6">โภชนาการ</h1>
 
@@ -411,7 +447,7 @@ export default function NutritionView({
                 <div className="text-xs text-[#7C8394] space-y-0.5 mb-3">
                   <p>แคลอรี่: {profile.daily_calories ?? '—'} kcal</p>
                   <p>โปรตีน: {profile.daily_protein_g ?? '—'} ก.</p>
-                  <p>น้ำ: {profile.daily_water_glasses} แก้ว</p>
+                  <p>น้ำ: {(profile.daily_water_ml / 1000).toFixed(1)} ล./วัน</p>
                   {profile.ai_rationale && <p className="mt-1.5 italic">{profile.ai_rationale}</p>}
                 </div>
               ) : (
@@ -432,27 +468,97 @@ export default function NutritionView({
                   <GlassWater size={13} /> น้ำดื่ม
                 </p>
                 <span className="text-xs tabular-nums text-[#7C8394]">
-                  {glassesToday}/{goalGlasses} แก้ว
-                  {overGlasses > 0 && <span className="text-[#4FC1E0] ml-1.5">เกินเป้า +{overGlasses}</span>}
+                  {(currentMl / 1000).toFixed(2)}/{(targetMl / 1000).toFixed(2)} ล.
+                  {overMl > 0 && (
+                    <span className="text-[#4FC1E0] ml-1.5">เกินเป้า +{(overMl / 1000).toFixed(1)} ล.</span>
+                  )}
                 </span>
               </div>
-              <button onClick={addGlass}
-                className="w-full py-3 rounded-lg bg-[#14171F] border border-[#2A2F3D]
-                  text-sm font-semibold flex items-center justify-center gap-1.5 min-h-[40px]">
-                <Plus size={14} /> ดื่มน้ำ
-              </button>
+              {remainingHint && (
+                <p className="text-[10px] text-[#7C8394] mb-2">{remainingHint}</p>
+              )}
+
+              <div className="flex flex-wrap gap-2 mb-2">
+                {containers.map(c => (
+                  <button key={c.id} onClick={() => addWater(c.ml, c.name)}
+                    className="px-3 py-2 rounded-lg bg-[#14171F] border border-[#2A2F3D]
+                      text-xs font-semibold min-h-[40px]">
+                    {c.name} +{c.ml}
+                  </button>
+                ))}
+              </div>
+
+              {!manualMlOpen ? (
+                <button onClick={() => setManualMlOpen(true)}
+                  className="text-xs text-[#7C8394] underline">+ กรอกเอง</button>
+              ) : (
+                <div className="flex gap-2">
+                  <input type="number" min="0" value={manualMl}
+                    onChange={e => setManualMl(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && saveManualMl()}
+                    placeholder="ml"
+                    className="flex-1 min-w-0 bg-[#14171F] border border-[#2A2F3D] rounded-lg
+                      px-3 py-1.5 text-sm outline-none focus:border-[#7C8394]" />
+                  <button onClick={saveManualMl}
+                    className="px-3 rounded-lg bg-[#EDEAE0] text-[#14171F] text-xs font-semibold">
+                    เพิ่ม
+                  </button>
+                </div>
+              )}
+
               {allWaterEntries.length > 0 && (
                 <div className="mt-2 space-y-0.5">
                   {allWaterEntries.map(e => (
                     <div key={e.id} className="flex items-center justify-between text-xs text-[#7C8394]">
-                      <span className="tabular-nums">{fmtHHMM(e.created_at)}</span>
+                      <span className="tabular-nums">
+                        {fmtHHMM(e.created_at)} · {e.ml} ml{e.container ? ` (${e.container})` : ''}
+                      </span>
                       {!e.id.startsWith('temp-') && (
-                        <button onClick={() => removeGlass(e.id)} className="p-1.5">
+                        <button onClick={() => removeWater(e.id)} className="p-1.5">
                           <X size={11} />
                         </button>
                       )}
                     </div>
                   ))}
+                </div>
+              )}
+
+              <button onClick={() => setContainerManageOpen(o => !o)}
+                className="text-xs text-[#7C8394] mt-2 underline">
+                {containerManageOpen ? 'ปิด' : 'จัดการภาชนะ'}
+              </button>
+
+              {containerManageOpen && (
+                <div className="mt-2 pt-2 border-t border-[#2A2F3D] space-y-2">
+                  {containers.map(c => (
+                    <div key={c.id} className="flex items-center gap-2">
+                      <input defaultValue={c.name} placeholder="ชื่อภาชนะ..."
+                        onBlur={e => e.target.value !== c.name && editContainer(c.id, 'name', e.target.value)}
+                        className="flex-1 min-w-0 bg-[#14171F] border border-[#2A2F3D] rounded-lg
+                          px-3 py-1.5 text-sm outline-none focus:border-[#7C8394]" />
+                      <input defaultValue={c.ml} type="number" min="1" placeholder="ml"
+                        onBlur={e => String(c.ml) !== e.target.value && editContainer(c.id, 'ml', e.target.value)}
+                        className="w-20 bg-[#14171F] border border-[#2A2F3D] rounded-lg
+                          px-2 py-1.5 text-xs outline-none focus:border-[#7C8394]" />
+                      <button onClick={() => removeContainer(c.id)}
+                        className="text-[#7C8394] p-1"><X size={14} /></button>
+                    </div>
+                  ))}
+                  <div className="flex items-center gap-2">
+                    <input value={newContainer.name} placeholder="เพิ่มภาชนะใหม่..."
+                      onChange={e => setNewContainer(p => ({ ...p, name: e.target.value }))}
+                      className="flex-1 min-w-0 bg-transparent border border-dashed border-[#2A2F3D]
+                        rounded-lg px-3 py-1.5 text-sm outline-none
+                        focus:border-[#7C8394] placeholder:text-[#7C8394]" />
+                    <input value={newContainer.ml} type="number" min="1" placeholder="ml"
+                      onChange={e => setNewContainer(p => ({ ...p, ml: e.target.value }))}
+                      onKeyDown={e => e.key === 'Enter' && addContainer()}
+                      className="w-20 bg-transparent border border-dashed border-[#2A2F3D]
+                        rounded-lg px-3 py-1.5 text-xs outline-none
+                        focus:border-[#7C8394] placeholder:text-[#7C8394]" />
+                    <button onClick={addContainer}
+                      className="text-[#7C8394] p-1"><Plus size={14} /></button>
+                  </div>
                 </div>
               )}
             </div>

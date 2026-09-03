@@ -3,14 +3,15 @@ import { CategoryWithRoutines } from '@/lib/supabase/types'
 import TodayView from '@/components/TodayView'
 import RealtimeRefresher from '@/components/RealtimeRefresher'
 import AppNav from '@/components/AppNav'
-import { todayKey } from '@/lib/dates'
+import { todayKey, getRolloverHour } from '@/lib/dates'
 import { requireModuleEnabled } from '@/lib/modules'
 
 export default async function RoutinePage() {
   await requireModuleEnabled('routine')
 
   const supabase = await createClient()
-  const today = todayKey() // ได้ "2026-09-01" ตาม Asia/Bangkok เสมอ ไม่ว่า server จะรัน timezone ไหน
+  const rollover = await getRolloverHour(supabase)
+  const today = todayKey(rollover) // ได้ "2026-09-01" ตาม Asia/Bangkok + day_rollover_hour เสมอ
 
   const { data: categories, error } = await supabase
     .from('routine_categories')

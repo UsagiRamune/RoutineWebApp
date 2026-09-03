@@ -378,7 +378,8 @@ export default function HistoryView({
                 โภชนาการ: {Math.round(dayNutTotals.cal)} kcal
                 {' '}(P{dayNutTotals.protein.toFixed(0)} C{dayNutTotals.carbs.toFixed(0)} F{dayNutTotals.fat.toFixed(0)})
                 {dayWater.length > 0 && (
-                  <> · น้ำ {dayWater.length} แก้ว ({fmtHHMM(dayWater[0].created_at)}–{fmtHHMM(dayWater[dayWater.length - 1].created_at)})</>
+                  <> · น้ำ {(dayWater.reduce((s, w) => s + (w.ml ?? 0), 0) / 1000).toFixed(2)} ล.
+                    {' '}({fmtHHMM(dayWater[0].created_at)}–{fmtHHMM(dayWater[dayWater.length - 1].created_at)})</>
                 )}
               </p>
             )}

@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import {
   CategoryWithRoutines, TimeEntry, DetailTopic,
 } from '@/lib/supabase/types'
-import { Play, Square, Plus, X, Pencil } from 'lucide-react'
+import { Play, Square, Plus, X, Pencil, Clock } from 'lucide-react'
 import EditRoutinePanel from '@/components/EditRoutinePanel'
 import { TZ } from '@/lib/dates'
 
@@ -171,6 +171,12 @@ export default function TodayView({ categories, today }: Props) {
                     className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4 mb-3">
                     <div className="flex items-center gap-2 mb-3">
                       <p className="font-medium text-sm">{routine.name}</p>
+                      {routine.remind_at && routine.remind_enabled && (
+                        <span className="flex items-center gap-1 text-[10px] text-[#7C8394]
+                          px-1.5 py-0.5 rounded-full border border-[#2A2F3D]">
+                          <Clock size={10} /> {routine.remind_at.slice(0, 5)}
+                        </span>
+                      )}
                       <button onClick={() => setEditing(editing === routine.id ? null : routine.id)}
                         className="text-[#7C8394]"><Pencil size={12} /></button>
                     </div>
@@ -223,6 +229,12 @@ export default function TodayView({ categories, today }: Props) {
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
                       <p className="font-medium text-sm">{routine.name}</p>
+                      {routine.remind_at && routine.remind_enabled && (
+                        <span className="flex items-center gap-1 text-[10px] text-[#7C8394]
+                          px-1.5 py-0.5 rounded-full border border-[#2A2F3D]">
+                          <Clock size={10} /> {routine.remind_at.slice(0, 5)}
+                        </span>
+                      )}
                       <button onClick={() => setEditing(editing === routine.id ? null : routine.id)}
                         className="text-[#7C8394]"><Pencil size={12} /></button>
                     </div>

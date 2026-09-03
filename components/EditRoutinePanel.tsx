@@ -4,6 +4,9 @@
 import { createClient } from '@/lib/supabase/client'
 import { RoutineWithDetails, CategoryKind } from '@/lib/supabase/types'
 import { Plus, X, Trash2 } from 'lucide-react'
+import Toggle from '@/components/ui/Toggle'
+
+const DAY_LABELS = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'] // 0=อาทิตย์ ตรงกับ remind_days
 
 interface Props {
   routine: RoutineWithDetails
@@ -54,6 +57,20 @@ export default function EditRoutinePanel({ routine, kind, today, onClose }: Prop
 
   async function removeItem(id: string) {
     await supabase.from('routine_items').update({ is_active: false }).eq('id', id)
+  }
+
+  async function setRemindAt(value: string) {
+    await supabase.from('routines').update({ remind_at: value || null }).eq('id', routine.id)
+  }
+
+  async function toggleRemindEnabled() {
+    await supabase.from('routines').update({ remind_enabled: !routine.remind_enabled }).eq('id', routine.id)
+  }
+
+  async function toggleRemindDay(day: number) {
+    const days = routine.remind_days ?? [0, 1, 2, 3, 4, 5, 6]
+    const next = days.includes(day) ? days.filter(d => d !== day) : [...days, day].sort()
+    await supabase.from('routines').update({ remind_days: next }).eq('id', routine.id)
   }
 
   async function removeRoutine() {
@@ -129,6 +146,27 @@ export default function EditRoutinePanel({ routine, kind, today, onClose }: Prop
           ))}
         </div>
       )}
+
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-xs text-[#7C8394]">เวลาเตือน</label>
+          <Toggle checked={routine.remind_enabled} onChange={toggleRemindEnabled} />
+        </div>
+        <input type="time" defaultValue={routine.remind_at?.slice(0, 5) ?? ''}
+          onBlur={(e) => setRemindAt(e.target.value)}
+          className="w-full bg-[#14171F] border border-[#2A2F3D] rounded-lg
+            px-3 py-1.5 text-sm outline-none focus:border-[#7C8394]" />
+        <div className="flex gap-1 mt-2">
+          {DAY_LABELS.map((label, i) => (
+            <button key={i} onClick={() => toggleRemindDay(i)}
+              className={`flex-1 py-1.5 rounded-md text-[10px] font-semibold transition-colors
+                ${(routine.remind_days ?? []).includes(i)
+                  ? 'bg-[#4FC1E0] text-[#14171F]' : 'border border-[#2A2F3D] text-[#7C8394]'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="flex justify-between pt-1">
         <button onClick={removeRoutine}

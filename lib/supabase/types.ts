@@ -18,6 +18,9 @@ export interface Routine {
     sort_order: number
     default_target_minutes: number | null
     created_at: string
+    remind_at: string | null
+    remind_enabled: boolean
+    remind_days: number[]
 }
 
 export interface RoutineItem {
@@ -131,7 +134,17 @@ export interface FoodEntry {
 export interface WaterEntry {
   id: string
   date: string
+  ml: number
+  container: string | null
   created_at: string
+}
+
+export interface WaterContainer {
+  id: string
+  name: string
+  ml: number
+  sort_order: number
+  is_active: boolean
 }
 
 export type SupplementSlot = 'wake' | 'sleep' | 'workout' | 'anytime'
@@ -167,9 +180,60 @@ export interface NutritionProfile {
   plan: NutritionPlan
   daily_calories: number | null
   daily_protein_g: number | null
-  daily_water_glasses: number
+  daily_water_ml: number
+  ml_per_sip: number
   ai_rationale: string | null
   updated_at: string
+}
+
+// ---------- sleep/wake ----------
+
+export type SleepEventSource = 'manual' | 'inferred'
+
+export interface SleepSession {
+  id: string
+  sleep_at: string
+  wake_at: string | null
+  sleep_source: SleepEventSource
+  wake_source: SleepEventSource | null
+  note: string | null
+  created_at: string
+}
+
+// ---------- app settings ----------
+
+export interface AppSettings {
+  id: number
+  day_rollover_hour: number
+  water_window_hours: number
+  water_frontload_ratio: number
+  assumed_sleep_hours: number
+  notify_email: string | null
+  quiet_hours_enabled: boolean
+}
+
+// ---------- notifications ----------
+
+export type NotificationKind =
+  | 'water' | 'if_window' | 'morning_digest' | 'routine_due' | 'calendar_event' | 'weekly_summary'
+
+export interface NotificationSetting {
+  kind: NotificationKind
+  label: string
+  enabled: boolean
+  max_per_day: number | null
+  min_gap_minutes: number | null
+  lead_minutes: number | null
+}
+
+export interface EmailLog {
+  id: string
+  kind: string
+  ref: string
+  subject: string
+  sent_at: string
+  ok: boolean
+  error: string | null
 }
 
 // ---------- health (manual entry only) ----------

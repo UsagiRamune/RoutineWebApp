@@ -5,15 +5,14 @@ import { NutritionPlan } from '@/lib/supabase/types'
 import { NextResponse } from 'next/server'
 
 const SYSTEM_PROMPT = `คำนวณเป้าจากน้ำหนัก ส่วนสูง และแผน (cut=ลดน้ำหนัก, normal=ใช้ชีวิตปกติ, bulk=สร้างกล้าม) แบบเข้มงวด:
-เป้าโปรตีนและน้ำให้เอาขอบบนของช่วงแนะนำ (โปรตีน 1.6-2.2 g/kg → ใช้ ~2.0-2.2 สำหรับ bulk/cut)
+เป้าโปรตีนให้เอาขอบบนของช่วงแนะนำ (โปรตีน 1.6-2.2 g/kg → ใช้ ~2.0-2.2 สำหรับ bulk/cut)
 เป้าแคลอรี่สำหรับ cut ให้ deficit จริงจังแต่ปลอดภัย ห้ามใจดีเกิน
-rationale อธิบายสั้นๆ ภาษาไทย
-ตอบ JSON เท่านั้น: {daily_calories, daily_protein_g, daily_water_glasses, rationale}`
+rationale อธิบายสั้นๆ ภาษาไทย (ไม่ต้องพูดถึงน้ำ คำนวณแยกจากสูตรตายตัวอยู่แล้ว)
+ตอบ JSON เท่านั้น: {daily_calories, daily_protein_g, rationale}`
 
 interface TargetsResult {
   daily_calories: number
   daily_protein_g: number
-  daily_water_glasses: number
   rationale: string
 }
 
@@ -52,12 +51,15 @@ export async function POST(request: Request) {
       `น้ำหนัก: ${metric.weight_kg} กก.\nส่วนสูง: ${metric.height_cm ?? 'ไม่ทราบ'} ซม.\nแผน: ${plan} (${planLabel})`
     )
 
+    // น้ำ: 35 ml/kg ปัดขึ้นเป็นหลักร้อยที่ใกล้ที่สุด — สูตรตายตัว ไม่ต้องพึ่ง AI เดา
+    const dailyWaterMl = Math.ceil((metric.weight_kg * 35) / 100) * 100
+
     const { data: profile, error } = await supabase.from('nutrition_profile').upsert({
       id: 1,
       plan,
       daily_calories: Math.round(result.daily_calories),
       daily_protein_g: Math.round(result.daily_protein_g),
-      daily_water_glasses: Math.round(result.daily_water_glasses),
+      daily_water_ml: dailyWaterMl,
       ai_rationale: result.rationale,
       updated_at: new Date().toISOString(),
     }).select().single()

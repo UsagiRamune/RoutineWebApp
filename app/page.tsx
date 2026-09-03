@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
-import { Module } from '@/lib/supabase/types'
-import { todayKey, dateKeyOffset, TZ } from '@/lib/dates'
+import { Module, WaterContainer } from '@/lib/supabase/types'
+import { todayKey, dateKeyOffset, getRolloverHour, TZ } from '@/lib/dates'
 import { weightAsOf } from '@/lib/nutrition'
 import { moduleLabel } from '@/lib/moduleLabels'
 import AppNav from '@/components/AppNav'
@@ -12,13 +12,14 @@ import Link from 'next/link'
 
 export default async function Dashboard() {
   const supabase = await createClient()
-  const today = todayKey()
-  const weekStart = dateKeyOffset(-6)
-  const yesterday = dateKeyOffset(-1)
+  const rollover = await getRolloverHour(supabase)
+  const today = todayKey(rollover)
+  const weekStart = dateKeyOffset(-6, rollover)
+  const yesterday = dateKeyOffset(-1, rollover)
 
   const [
     modulesRes, categoriesRes, weekEntriesRes, foodRes, waterRes, ifRes, profileRes, healthRes,
-    latestWeightRes, weightWindowRes,
+    latestWeightRes, weightWindowRes, containersRes, appSettingsRes,
   ] = await Promise.all([
     supabase.from('modules').select('*').eq('enabled', true).order('sort_order'),
     supabase.from('routine_categories').select(`
@@ -31,13 +32,15 @@ export default async function Dashboard() {
     `),
     supabase.from('time_entries').select('date, clock_in, clock_out').gte('date', weekStart),
     supabase.from('food_entries').select('calories, protein_g').eq('date', today),
-    supabase.from('water_entries').select('created_at').eq('date', today).order('created_at'),
+    supabase.from('water_entries').select('ml, created_at').eq('date', today).order('created_at'),
     supabase.from('if_settings').select('*').eq('id', 1).maybeSingle(),
     supabase.from('nutrition_profile').select('*').eq('id', 1).maybeSingle(),
     supabase.from('health_daily').select('date, steps, calories_burned').in('date', [today, yesterday]),
     supabase.from('body_metrics').select('date, weight_kg')
       .not('weight_kg', 'is', null).order('date', { ascending: false }).limit(1).maybeSingle(),
-    supabase.from('body_metrics').select('date, weight_kg').gte('date', dateKeyOffset(-10)).order('date'),
+    supabase.from('body_metrics').select('date, weight_kg').gte('date', dateKeyOffset(-10, rollover)).order('date'),
+    supabase.from('water_containers').select('*').eq('is_active', true).order('sort_order'),
+    supabase.from('app_settings').select('*').eq('id', 1).maybeSingle(),
   ])
 
   const modules = (modulesRes.data ?? []) as Module[]
@@ -73,19 +76,24 @@ export default async function Dashboard() {
   const caloriesEaten = (foodRes.data ?? []).reduce((s, f) => s + (f.calories ?? 0), 0)
   const proteinEaten = (foodRes.data ?? []).reduce((s, f) => s + (f.protein_g ?? 0), 0)
   const waterEntries = waterRes.data ?? []
-  const glassesToday = waterEntries.length
-  const lastDrinkAt = waterEntries.length > 0 ? waterEntries[waterEntries.length - 1].created_at : null
+  const waterMlToday = waterEntries.reduce((s, w) => s + (w.ml ?? 0), 0)
   const ifSettings = ifRes.data
   const profile = profileRes.data
   const plan = profile?.plan ?? 'normal'
   const caloriesTarget = profile?.daily_calories ?? null
   const proteinTarget = profile?.daily_protein_g ?? null
-  const goalGlasses = profile?.daily_water_glasses ?? 10
+  const waterTargetMl = profile?.daily_water_ml ?? 4000
+  const mlPerSip = profile?.ml_per_sip ?? 37
   const proteinGapVal = proteinTarget !== null ? proteinTarget - proteinEaten : null
+
+  const appSettings = appSettingsRes.data
+  const windowHours = appSettings?.water_window_hours ?? 13
+  const frontloadRatio = appSettings?.water_frontload_ratio ?? 0.30
+  const assumedSleepHours = appSettings?.assumed_sleep_hours ?? 8
 
   // ---- ร่างกาย: น้ำหนักล่าสุด + เทียบ 7 วันก่อน, ก้าววันนี้ ----
   const latestWeight = latestWeightRes.data?.weight_kg ?? null
-  const weight7 = weightAsOf(dateKeyOffset(-7), weightWindowRes.data ?? [])
+  const weight7 = weightAsOf(dateKeyOffset(-7, rollover), weightWindowRes.data ?? [])
   const weightDelta7 = (latestWeight != null && weight7 != null) ? latestWeight - weight7 : null
   const healthRows = healthRes.data ?? []
   const todayHealthRow = healthRows.find(r => r.date === today)
@@ -107,9 +115,13 @@ export default async function Dashboard() {
           caloriesTarget={caloriesTarget}
           proteinEaten={proteinEaten}
           proteinTarget={proteinTarget}
-          glassesToday={glassesToday}
-          goalGlasses={goalGlasses}
-          lastDrinkAt={lastDrinkAt}
+          waterMlToday={waterMlToday}
+          waterTargetMl={waterTargetMl}
+          mlPerSip={mlPerSip}
+          windowHours={windowHours}
+          frontloadRatio={frontloadRatio}
+          assumedSleepHours={assumedSleepHours}
+          containers={(containersRes.data ?? []) as WaterContainer[]}
           ifSettings={ifSettings}
           latestWeight={latestWeight}
           weightDelta7={weightDelta7}
@@ -144,7 +156,7 @@ export default async function Dashboard() {
               if (m.key === 'nutrition') {
                 const gapText = proteinGapVal !== null && proteinGapVal > 0
                   ? `โปรตีนขาด ${Math.round(proteinGapVal)} ก.`
-                  : `น้ำ ${glassesToday}/${goalGlasses} แก้ว`
+                  : `น้ำ ${(waterMlToday / 1000).toFixed(1)}/${(waterTargetMl / 1000).toFixed(1)} ล.`
                 return (
                   <ModuleCard key={m.key} href="/nutrition" title={moduleLabel(m)}>
                     <p className="text-2xl font-semibold">

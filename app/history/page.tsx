@@ -2,7 +2,7 @@
 import { createClient } from '@/lib/supabase/server'
 import HistoryView from '@/components/HistoryView'
 import AppNav from '@/components/AppNav'
-import { todayKey, dateKeyOffset } from '@/lib/dates'
+import { todayKey, dateKeyOffset, getRolloverHour } from '@/lib/dates'
 
 // searchParams ใน Next.js 15 เป็น Promise ต้อง await
 interface Props {
@@ -14,11 +14,12 @@ export default async function History({ searchParams }: Props) {
   const view = (['week', 'month', 'year'].includes(viewParam ?? '')
     ? viewParam : 'week') as 'week' | 'month' | 'year'
 
+  const supabase = await createClient()
+  const rollover = await getRolloverHour(supabase)
+
   // ช่วงวันที่ตามมุมมอง
   const days = view === 'week' ? 7 : view === 'month' ? 30 : 365
-  const fromStr = dateKeyOffset(-days)
-
-  const supabase = await createClient()
+  const fromStr = dateKeyOffset(-days, rollover)
 
   // ยิง query พร้อมกัน — ไม่ต้องรอทีละอัน
   const [entries, completions, targets, metrics, categories, foodEntries, waterEntries] = await Promise.all([
@@ -35,7 +36,7 @@ export default async function History({ searchParams }: Props) {
     supabase.from('water_entries').select('*').gte('date', fromStr),
   ])
 
-  const today = todayKey()
+  const today = todayKey(rollover)
 
   return (
     <>

@@ -5,16 +5,17 @@ import {
 import AppNav from '@/components/AppNav'
 import RealtimeRefresher from '@/components/RealtimeRefresher'
 import BodyView from '@/components/health/BodyView'
-import { todayKey, dateKeyOffset } from '@/lib/dates'
+import { todayKey, dateKeyOffset, getRolloverHour } from '@/lib/dates'
 import { requireModuleEnabled } from '@/lib/modules'
 
 export default async function HealthPage() {
   await requireModuleEnabled('health')
 
   const supabase = await createClient()
-  const today = todayKey()
-  const from40 = dateKeyOffset(-39) // ครอบ 30 วันสำหรับกราฟ + เผื่อหา "30 วันก่อน" ย้อนไปอีกหน่อย
-  const from14 = dateKeyOffset(-13)
+  const rollover = await getRolloverHour(supabase)
+  const today = todayKey(rollover)
+  const from40 = dateKeyOffset(-39, rollover) // ครอบ 30 วันสำหรับกราฟ + เผื่อหา "30 วันก่อน" ย้อนไปอีกหน่อย
+  const from14 = dateKeyOffset(-13, rollover)
 
   const [metricsRes, healthRes, latestHeightRes, supplementsRes, supplementLogsRes, profileRes] =
     await Promise.all([
