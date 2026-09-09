@@ -28,11 +28,13 @@ export async function middleware(request: NextRequest) {
     // สำคัญ: ห้ามลบบรรทัดนี้ — เป็นตัว refresh session ให้ไม่หมดอายุ
     const { data: { user } } = await supabase.auth.getUser()
 
-    // ยังไม่ login และไม่ได้อยู่หน้า login หรือกำลังยืนยัน magic link/OAuth → เด้งไป /login
+    // ยังไม่ login และไม่ได้อยู่หน้า login, กำลังยืนยัน magic link/OAuth, หรือเป็น cron route
+    // (cron ไม่มี user session เลย — auth เองผ่าน Authorization: Bearer CRON_SECRET ในตัว route handler) → เด้งไป /login
     if (
         !user &&
         !request.nextUrl.pathname.startsWith('/login') &&
-        !request.nextUrl.pathname.startsWith('/auth')
+        !request.nextUrl.pathname.startsWith('/auth') &&
+        !request.nextUrl.pathname.startsWith('/api/cron')
     ) {
         const url = request.nextUrl.clone()
         url.pathname = '/login'
