@@ -9,11 +9,21 @@ import { todayKey, getRolloverHour } from '@/lib/dates'
 import { NextResponse } from 'next/server'
 
 async function handle(request: Request) {
+  // cron routes ไม่มี user session ให้ middleware ตรวจ — auth ทั้งหมดอยู่ที่ Bearer CRON_SECRET
+  // นี้เท่านั้น ต้องคืน 401 ตรงๆ ห้าม redirect ไป /login เด็ดขาด (ผู้เรียกเป็น scheduler ไม่ใช่ browser)
   if (!checkCronAuth(request)) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
-  const supabase = createCronClient()
+  let supabase: ReturnType<typeof createCronClient>
+  try {
+    supabase = createCronClient()
+  } catch (err) {
+    return NextResponse.json({
+      error: err instanceof Error ? err.message : 'สร้าง Supabase client ไม่สำเร็จ',
+    }, { status: 500 })
+  }
+
   const rollover = await getRolloverHour(supabase)
 
   const { data: appSettings } = await supabase.from('app_settings').select('notify_email').eq('id', 1).maybeSingle()

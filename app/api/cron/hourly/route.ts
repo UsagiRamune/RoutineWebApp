@@ -1,6 +1,6 @@
 // cron รายชั่วโมง (เรียกจาก scheduler ภายนอก) — ประเมิน 6 กติกาแยกอิสระจากกัน (rule ล้มไม่ควรบล็อกตัวอื่น)
 // auth: Authorization: Bearer <CRON_SECRET>
-import { createCronClient, checkCronAuth, cronClientMode, logCronError } from '@/lib/supabase/cron'
+import { createCronClient, checkCronAuth, logCronError } from '@/lib/supabase/cron'
 import { sendEmail } from '@/lib/notify/mailer'
 import { emailTemplate } from '@/lib/notify/template'
 import { buildMorningDigestBody } from '@/lib/notify/digest'
@@ -15,12 +15,21 @@ function fmtLeadTime(minutes: number): string {
 }
 
 async function handle(request: Request) {
+  // cron routes ไม่มี user session ให้ middleware ตรวจ — auth ทั้งหมดอยู่ที่ Bearer CRON_SECRET
+  // นี้เท่านั้น ต้องคืน 401 ตรงๆ ห้าม redirect ไป /login เด็ดขาด (ผู้เรียกเป็น scheduler ไม่ใช่ browser)
   if (!checkCronAuth(request)) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
-  const supabase = createCronClient()
-  const clientMode = cronClientMode()
+  let supabase: ReturnType<typeof createCronClient>
+  try {
+    supabase = createCronClient()
+  } catch (err) {
+    return NextResponse.json({
+      error: err instanceof Error ? err.message : 'สร้าง Supabase client ไม่สำเร็จ',
+    }, { status: 500 })
+  }
+
   const rollover = await getRolloverHour(supabase)
   const today = todayKey(rollover)
   const { hour: nowHour, weekday: nowWeekday } = bangkokNow()
@@ -29,7 +38,7 @@ async function handle(request: Request) {
 
   const { data: appSettings, error: appSettingsError } = await supabase.from('app_settings').select('*').eq('id', 1).maybeSingle()
   logCronError('app_settings', appSettingsError)
-  // แถวอ่านไม่ได้ (เช่น RLS block ตอนใช้ anon key) ต้องไม่ถูกตีความเหมือน "ยังไม่ได้ตั้งค่า" — ทั้งสองเคสหน้าตาเหมือนกัน
+  // แถวอ่านไม่ได้ (เช่น RLS block) ต้องไม่ถูกตีความเหมือน "ยังไม่ได้ตั้งค่า" — ทั้งสองเคสหน้าตาเหมือนกัน
   // ถ้าไม่แยก (data เป็น null ทั้งคู่) ดังนั้นเช็ค error ก่อนเสมอ
   if (appSettingsError) {
     return NextResponse.json({
@@ -37,13 +46,12 @@ async function handle(request: Request) {
       supabaseError: {
         message: appSettingsError.message, code: appSettingsError.code, details: appSettingsError.details,
       },
-      clientMode,
     }, { status: 500 })
   }
 
   const notifyEmail: string | null = appSettings?.notify_email ?? null
   if (!notifyEmail) {
-    return NextResponse.json({ error: 'ยังไม่ได้ตั้ง notify_email', clientMode, results: {} })
+    return NextResponse.json({ error: 'ยังไม่ได้ตั้ง notify_email', results: {} })
   }
 
   const { data: latestSleep, error: latestSleepError } = await supabase.from('sleep_sessions')
@@ -289,7 +297,7 @@ async function handle(request: Request) {
     results.calendar_event = { sent: false, reason: `error: ${err instanceof Error ? err.message : 'unknown'}` }
   }
 
-  return NextResponse.json({ ok: true, today, hour: nowHour, quietNow, clientMode, results })
+  return NextResponse.json({ ok: true, today, hour: nowHour, quietNow, results })
 }
 
 export async function POST(request: Request) { return handle(request) }
