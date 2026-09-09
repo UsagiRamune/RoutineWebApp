@@ -1,6 +1,6 @@
 // cron รายชั่วโมง (เรียกจาก scheduler ภายนอก) — ประเมิน 6 กติกาแยกอิสระจากกัน (rule ล้มไม่ควรบล็อกตัวอื่น)
 // auth: Authorization: Bearer <CRON_SECRET>
-import { createCronClient, checkCronAuth } from '@/lib/supabase/cron'
+import { createCronClient, checkCronAuth, cronClientMode, logCronError } from '@/lib/supabase/cron'
 import { sendEmail } from '@/lib/notify/mailer'
 import { emailTemplate } from '@/lib/notify/template'
 import { buildMorningDigestBody } from '@/lib/notify/digest'
@@ -20,20 +20,35 @@ async function handle(request: Request) {
   }
 
   const supabase = createCronClient()
+  const clientMode = cronClientMode()
   const rollover = await getRolloverHour(supabase)
   const today = todayKey(rollover)
   const { hour: nowHour, weekday: nowWeekday } = bangkokNow()
 
   const results: Record<string, unknown> = {}
 
-  const { data: appSettings } = await supabase.from('app_settings').select('*').eq('id', 1).maybeSingle()
-  const notifyEmail: string | null = appSettings?.notify_email ?? null
-  if (!notifyEmail) {
-    return NextResponse.json({ error: 'ยังไม่ได้ตั้ง notify_email', results: {} })
+  const { data: appSettings, error: appSettingsError } = await supabase.from('app_settings').select('*').eq('id', 1).maybeSingle()
+  logCronError('app_settings', appSettingsError)
+  // แถวอ่านไม่ได้ (เช่น RLS block ตอนใช้ anon key) ต้องไม่ถูกตีความเหมือน "ยังไม่ได้ตั้งค่า" — ทั้งสองเคสหน้าตาเหมือนกัน
+  // ถ้าไม่แยก (data เป็น null ทั้งคู่) ดังนั้นเช็ค error ก่อนเสมอ
+  if (appSettingsError) {
+    return NextResponse.json({
+      error: 'อ่าน app_settings ไม่สำเร็จ',
+      supabaseError: {
+        message: appSettingsError.message, code: appSettingsError.code, details: appSettingsError.details,
+      },
+      clientMode,
+    }, { status: 500 })
   }
 
-  const { data: latestSleep } = await supabase.from('sleep_sessions')
+  const notifyEmail: string | null = appSettings?.notify_email ?? null
+  if (!notifyEmail) {
+    return NextResponse.json({ error: 'ยังไม่ได้ตั้ง notify_email', clientMode, results: {} })
+  }
+
+  const { data: latestSleep, error: latestSleepError } = await supabase.from('sleep_sessions')
     .select('*').order('sleep_at', { ascending: false }).limit(1).maybeSingle()
+  logCronError('sleep_sessions (latest)', latestSleepError)
   const asleep = !!latestSleep && latestSleep.wake_at == null
   const quietNow = !!appSettings?.quiet_hours_enabled && asleep
 
@@ -44,8 +59,9 @@ async function handle(request: Request) {
     } else if (quietNow) {
       results.water = { sent: false, reason: 'quiet hours' }
     } else {
-      const { data: sessions } = await supabase.from('sleep_sessions')
+      const { data: sessions, error: sessionsError } = await supabase.from('sleep_sessions')
         .select('*').order('sleep_at', { ascending: false }).limit(20)
+      logCronError('sleep_sessions (water anchor)', sessionsError)
       let anchor = new Date(`${today}T${String(rollover).padStart(2, '0')}:00:00+07:00`)
       for (const s of sessions ?? []) {
         if (!s.wake_at) continue
@@ -62,6 +78,8 @@ async function handle(request: Request) {
           supabase.from('nutrition_profile').select('*').eq('id', 1).maybeSingle(),
           supabase.from('water_entries').select('ml').eq('date', today),
         ])
+        logCronError('nutrition_profile', profileRes.error)
+        logCronError('water_entries', waterRes.error)
         const profile = profileRes.data
         const actualMl = (waterRes.data ?? []).reduce((s: number, w: any) => s + (w.ml ?? 0), 0)
         const pacing = computeWaterPacing({
@@ -98,12 +116,14 @@ async function handle(request: Request) {
     if (quietNow) {
       results.if_window = { sent: false, reason: 'quiet hours' }
     } else {
-      const { data: ifSettings } = await supabase.from('if_settings').select('*').eq('id', 1).maybeSingle()
+      const { data: ifSettings, error: ifSettingsError } = await supabase.from('if_settings').select('*').eq('id', 1).maybeSingle()
+      logCronError('if_settings', ifSettingsError)
       if (!ifSettings?.enabled) {
         results.if_window = { sent: false, reason: 'IF disabled' }
       } else {
-        const { data: nsRow } = await supabase.from('notification_settings')
+        const { data: nsRow, error: nsError } = await supabase.from('notification_settings')
           .select('lead_minutes').eq('kind', 'if_window').maybeSingle()
+        logCronError('notification_settings (if_window)', nsError)
         const leadMin = nsRow?.lead_minutes ?? 60
 
         const nowSec = nowHour * 3600 + bangkokNow().minute * 60
@@ -143,13 +163,15 @@ async function handle(request: Request) {
 
   // ---------- 3. morning_digest ----------
   try {
-    const { data: nsRow } = await supabase.from('notification_settings')
+    const { data: nsRow, error: nsError } = await supabase.from('notification_settings')
       .select('lead_minutes').eq('kind', 'morning_digest').maybeSingle()
+    logCronError('notification_settings (morning_digest)', nsError)
     const leadMin = nsRow?.lead_minutes ?? 30
 
-    const { data: lastWakeRow } = await supabase.from('sleep_sessions')
+    const { data: lastWakeRow, error: lastWakeError } = await supabase.from('sleep_sessions')
       .select('wake_at').not('wake_at', 'is', null)
       .order('wake_at', { ascending: false }).limit(1).maybeSingle()
+    logCronError('sleep_sessions (last wake)', lastWakeError)
     const wakeAt = lastWakeRow?.wake_at ? new Date(lastWakeRow.wake_at) : null
     const wokeToday = !!wakeAt && dateKeyForTimestamp(wakeAt, rollover) === today
     const minsSinceWake = wakeAt ? (Date.now() - wakeAt.getTime()) / 60000 : Infinity
@@ -175,12 +197,13 @@ async function handle(request: Request) {
     if (quietNow) {
       results.routine_due = { sent: false, reason: 'quiet hours' }
     } else {
-      const { data: categories } = await supabase.from('routine_categories').select(`
+      const { data: categories, error: categoriesError } = await supabase.from('routine_categories').select(`
         kind,
         routines ( id, name, is_active, remind_enabled, remind_at, remind_days,
           routine_items ( is_active, item_completions ( date ) ),
           time_entries ( date ) )
       `)
+      logCronError('routine_categories/routines', categoriesError)
 
       const sent: unknown[] = []
       for (const cat of categories ?? []) {
@@ -217,12 +240,14 @@ async function handle(request: Request) {
     if (quietNow) {
       results.calendar_event = { sent: false, reason: 'quiet hours' }
     } else {
-      const { data: conn } = await supabase.from('google_connections').select('refresh_token').limit(1).maybeSingle()
+      const { data: conn, error: connError } = await supabase.from('google_connections').select('refresh_token').limit(1).maybeSingle()
+      logCronError('google_connections', connError)
       if (!conn?.refresh_token) {
         results.calendar_event = { sent: false, reason: 'no google connection' }
       } else {
-        const { data: nsRow } = await supabase.from('notification_settings')
+        const { data: nsRow, error: nsError } = await supabase.from('notification_settings')
           .select('lead_minutes').eq('kind', 'calendar_event').maybeSingle()
+        logCronError('notification_settings (calendar_event)', nsError)
         const leadMin = nsRow?.lead_minutes ?? 15
 
         const origin = new URL(request.url).origin
@@ -264,7 +289,7 @@ async function handle(request: Request) {
     results.calendar_event = { sent: false, reason: `error: ${err instanceof Error ? err.message : 'unknown'}` }
   }
 
-  return NextResponse.json({ ok: true, today, hour: nowHour, quietNow, results })
+  return NextResponse.json({ ok: true, today, hour: nowHour, quietNow, clientMode, results })
 }
 
 export async function POST(request: Request) { return handle(request) }
