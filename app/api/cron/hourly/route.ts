@@ -6,7 +6,8 @@ import { emailTemplate } from '@/lib/notify/template'
 import { buildMorningDigestBody } from '@/lib/notify/digest'
 import { todayKey, dateKeyForTimestamp, getRolloverHour, bangkokNow } from '@/lib/dates'
 import { computeWaterPacing } from '@/lib/water'
-import { calendarFor } from '@/lib/google/calendar'
+import { syncCalendarToCache } from '@/lib/google/calendar-sync'
+import { registerPrimaryCalendarChannel } from '@/lib/google/calendar-channel'
 import { NextResponse } from 'next/server'
 
 function fmtLeadTime(minutes: number): string {
@@ -49,9 +50,38 @@ async function handle(request: Request) {
     }, { status: 500 })
   }
 
+  // ---------- 0. calendar: renew push channel (กันหมดอายุ) + full sync cache กันเหตุการณ์ webhook หลุด ----------
+  // ต้องอยู่ก่อน early-return ของ notify_email ด้านล่าง เพราะ cache/channel ต้องอัปเดตทุกชั่วโมงเสมอ
+  // ไม่เกี่ยวกับว่าผู้ใช้ตั้งอีเมลแจ้งเตือนไว้หรือยัง (หน้าปฏิทิน/dashboard อ่าน cache นี้ตรงๆ)
+  try {
+    const origin = new URL(request.url).origin
+    const { data: conn, error: connError } = await supabase.from('google_connections')
+      .select('refresh_token').limit(1).maybeSingle()
+    logCronError('google_connections (calendar sync)', connError)
+
+    if (!conn?.refresh_token) {
+      results.calendar_channel = { renewed: false, reason: 'no google connection' }
+      results.calendar_sync = { ok: false, reason: 'no google connection' }
+    } else {
+      const { data: channel, error: channelError } = await supabase.from('google_calendar_channels')
+        .select('expiration').eq('calendar_id', 'primary').maybeSingle()
+      logCronError('google_calendar_channels', channelError)
+
+      const expiringSoon = !channel ||
+        new Date(channel.expiration).getTime() - Date.now() < 2 * 3600 * 1000
+      results.calendar_channel = expiringSoon
+        ? await registerPrimaryCalendarChannel(supabase, origin, conn.refresh_token)
+        : { ok: true, skipped: 'not expiring within 2h', expiration: channel.expiration }
+
+      results.calendar_sync = await syncCalendarToCache(supabase, origin, conn.refresh_token)
+    }
+  } catch (err) {
+    results.calendar_channel = { ok: false, reason: `error: ${err instanceof Error ? err.message : 'unknown'}` }
+  }
+
   const notifyEmail: string | null = appSettings?.notify_email ?? null
   if (!notifyEmail) {
-    return NextResponse.json({ error: 'ยังไม่ได้ตั้ง notify_email', results: {} })
+    return NextResponse.json({ error: 'ยังไม่ได้ตั้ง notify_email', results })
   }
 
   const { data: latestSleep, error: latestSleepError } = await supabase.from('sleep_sessions')
@@ -244,6 +274,8 @@ async function handle(request: Request) {
   }
 
   // ---------- 5. calendar_event ----------
+  // อ่านจาก calendar_events_cache (sync แล้วในบล็อก 0 ของ cron รอบนี้) แทนการยิง Google สดเหมือนเดิม —
+  // ตามหลักการใหม่ว่า syncCalendarToCache() คือจุดเดียวที่คุยกับ Google สำหรับอ่านข้อมูลปฏิทิน
   try {
     if (quietNow) {
       results.calendar_event = { sent: false, reason: 'quiet hours' }
@@ -258,37 +290,28 @@ async function handle(request: Request) {
         logCronError('notification_settings (calendar_event)', nsError)
         const leadMin = nsRow?.lead_minutes ?? 15
 
-        const origin = new URL(request.url).origin
-        const cal = calendarFor(origin, conn.refresh_token)
-        const calList = await cal.calendarList.list()
-        const calendars = calList.data.items ?? []
         const now = Date.now()
         const horizon = now + leadMin * 60000
 
+        const { data: upcoming, error: upcomingError } = await supabase.from('calendar_events_cache')
+          .select('google_event_id, title, start_at')
+          .eq('kind', 'event').eq('all_day', false).eq('is_birthday', false)
+          .gte('start_at', new Date(now).toISOString()).lte('start_at', new Date(horizon).toISOString())
+        logCronError('calendar_events_cache (calendar_event)', upcomingError)
+
         const sent: unknown[] = []
-        for (const c of calendars) {
-          const evRes = await cal.events.list({
-            calendarId: c.id!, timeMin: new Date(now).toISOString(), timeMax: new Date(horizon).toISOString(),
-            singleEvents: true, orderBy: 'startTime', maxResults: 10,
-          }).catch(() => null)
-
-          for (const e of evRes?.data.items ?? []) {
-            if (!e.start?.dateTime) continue // all-day → skip
-            if (e.eventType === 'birthday' || (c.id ?? '').includes('#contacts')) continue // birthday → skip
-            const startMs = new Date(e.start.dateTime).getTime()
-            if (startMs < now || startMs > horizon) continue
-
-            const minsAway = Math.max(0, Math.round((startMs - now) / 60000))
-            const title = e.summary ?? '(ไม่มีชื่อ)'
-            const html = emailTemplate({
-              heading: `อีก ${minsAway} นาที: ${title}`,
-              bodyHtml: `<p style="margin:0;">เริ่ม ${new Date(e.start.dateTime).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' })}</p>`,
-            })
-            const res = await sendEmail(supabase, {
-              kind: 'calendar_event', ref: e.id!, subject: `อีก ${minsAway} นาที: ${title}`, html,
-            }, notifyEmail)
-            sent.push({ event: title, ...res })
-          }
+        for (const e of upcoming ?? []) {
+          const startMs = new Date(e.start_at!).getTime()
+          const minsAway = Math.max(0, Math.round((startMs - now) / 60000))
+          const title = e.title ?? '(ไม่มีชื่อ)'
+          const html = emailTemplate({
+            heading: `อีก ${minsAway} นาที: ${title}`,
+            bodyHtml: `<p style="margin:0;">เริ่ม ${new Date(e.start_at!).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' })}</p>`,
+          })
+          const res = await sendEmail(supabase, {
+            kind: 'calendar_event', ref: e.google_event_id, subject: `อีก ${minsAway} นาที: ${title}`, html,
+          }, notifyEmail)
+          sent.push({ event: title, ...res })
         }
         results.calendar_event = sent.length > 0 ? sent : { sent: false, reason: 'no upcoming event' }
       }

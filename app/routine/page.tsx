@@ -13,18 +13,21 @@ export default async function RoutinePage() {
   const rollover = await getRolloverHour(supabase)
   const today = todayKey(rollover) // ได้ "2026-09-01" ตาม Asia/Bangkok + day_rollover_hour เสมอ
 
-  const { data: categories, error } = await supabase
-    .from('routine_categories')
-    .select(`
-      *,
-      routines (
+  const [{ data: categories, error }, { data: projects }] = await Promise.all([
+    supabase
+      .from('routine_categories')
+      .select(`
         *,
-        routine_items (*, item_completions (*)),
-        time_entries (*),
-        daily_targets (*)
-      )
-    `)
-    .order('sort_order')
+        routines (
+          *,
+          routine_items (*, item_completions (*)),
+          time_entries (*),
+          daily_targets (*)
+        )
+      `)
+      .order('sort_order'),
+    supabase.from('projects').select('id, name').eq('status', 'active').order('sort_order'),
+  ])
 
   if (error) {
     return (
@@ -41,6 +44,7 @@ export default async function RoutinePage() {
       <TodayView
         categories={(categories ?? []) as CategoryWithRoutines[]}
         today={today}
+        projects={projects ?? []}
       />
     </>
   )

@@ -14,14 +14,17 @@ import { TZ } from '@/lib/dates'
 interface Props {
   categories: CategoryWithRoutines[]
   today: string
+  projects: { id: string; name: string }[]
 }
 
-export default function TodayView({ categories, today }: Props) {
+export default function TodayView({ categories, today, projects }: Props) {
   const supabase = createClient()
 
-  // นาฬิกาเดินทุกวินาที
-  const [now, setNow] = useState(() => Date.now())
+  // นาฬิกาเดินทุกวินาที — เริ่ม null ให้ server/client render รอบแรกตรงกัน (กัน hydration mismatch
+  // ของ timer ที่กำลังนับเวลาอยู่) แล้วค่อยตั้งเวลาจริงใน useEffect ซึ่งรันฝั่ง client เท่านั้น
+  const [now, setNow] = useState<number | null>(null)
   useEffect(() => {
+    setNow(Date.now())
     const t = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(t)
   }, [])
@@ -57,7 +60,8 @@ export default function TodayView({ categories, today }: Props) {
   }
 
   function fmtRunning(e: TimeEntry) {
-    const secs = Math.max(0, Math.floor((now - new Date(e.clock_in).getTime()) / 1000))
+    // now === null ก่อน mount (server render/client render รอบแรก) — โชว์ 00:00:00 ตรงกันทั้งคู่ก่อน
+    const secs = now === null ? 0 : Math.max(0, Math.floor((now - new Date(e.clock_in).getTime()) / 1000))
     const h = String(Math.floor(secs / 3600)).padStart(2, '0')
     const m = String(Math.floor((secs % 3600) / 60)).padStart(2, '0')
     const s = String(secs % 60).padStart(2, '0')
@@ -66,7 +70,7 @@ export default function TodayView({ categories, today }: Props) {
 
   function minutesOfEntry(e: TimeEntry) {
     const start = new Date(e.clock_in).getTime()
-    const end = e.clock_out ? new Date(e.clock_out).getTime() : now
+    const end = e.clock_out ? new Date(e.clock_out).getTime() : (now ?? start)
     return Math.max(0, Math.floor((end - start) / 60000))
   }
 
@@ -206,7 +210,7 @@ export default function TodayView({ categories, today }: Props) {
                     })}
                     {editing === routine.id && (
                       <EditRoutinePanel routine={routine} kind={cat.kind}
-                        today={today} onClose={() => setEditing(null)} />
+                        today={today} projects={projects} onClose={() => setEditing(null)} />
                     )}
                   </div>
                 )
@@ -330,7 +334,7 @@ export default function TodayView({ categories, today }: Props) {
                   ))}
                   {editing === routine.id && (
                     <EditRoutinePanel routine={routine} kind={cat.kind}
-                      today={today} onClose={() => setEditing(null)} />
+                      today={today} projects={projects} onClose={() => setEditing(null)} />
                   )}
                 </div>
               )

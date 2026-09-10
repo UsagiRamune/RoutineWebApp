@@ -219,14 +219,17 @@ export default function NutritionView({
 
   // ---------- intermittent fasting ----------
 
-  const [now, setNow] = useState(() => Date.now())
+  // เริ่ม null ให้ server/client render รอบแรกตรงกัน (กัน hydration mismatch ของ countdown IF)
+  // แล้วค่อยตั้งเวลาจริงใน useEffect ซึ่งรันฝั่ง client เท่านั้น
+  const [now, setNow] = useState<number | null>(null)
   useEffect(() => {
     if (!ifSettings?.enabled) return
+    setNow(Date.now())
     const t = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(t)
   }, [ifSettings?.enabled])
 
-  const status = ifSettings?.enabled ? ifStatus(ifSettings, new Date(now)) : null
+  const status = now !== null && ifSettings?.enabled ? ifStatus(ifSettings, new Date(now)) : null
 
   async function setIfEnabled(enabled: boolean) {
     await supabase.from('if_settings').upsert({ id: 1, enabled })

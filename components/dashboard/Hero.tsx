@@ -56,13 +56,16 @@ export default function Hero({
   const supabase = createClient()
 
   // ---------- นาฬิกาเดิน (ใช้ร่วมกันทั้ง IF / หลับ-ตื่น / pacing น้ำ) ----------
-  const [nowTick, setNowTick] = useState(() => Date.now())
+  // เริ่มที่ null เสมอ (ทั้ง server render และ client render รอบแรกต้องตรงกัน) แล้วค่อยตั้งเวลาจริง
+  // ใน useEffect (รันเฉพาะฝั่ง client หลัง hydrate) — กันข้อความนับเวลาถอยหลังไม่ตรงกันจน React warn
+  const [nowTick, setNowTick] = useState<number | null>(null)
   useEffect(() => {
+    setNowTick(Date.now())
     const t = setInterval(() => setNowTick(Date.now()), 30000)
     return () => clearInterval(t)
   }, [])
 
-  const status = ifSettings?.enabled ? ifStatus(ifSettings, new Date(nowTick)) : null
+  const status = nowTick !== null && ifSettings?.enabled ? ifStatus(ifSettings, new Date(nowTick)) : null
   const ifChip = ifSettings?.enabled && status
     ? (status.eating ? `กินได้ถึง ${ifSettings.eat_end.slice(0, 5)}` : `fast อีก ${fmtHM(status.remainingSec)}`)
     : null
@@ -119,10 +122,12 @@ export default function Hero({
   }
 
   const asleep = sleepState?.state === 'asleep'
-  const hoursAsleep = asleep && sleepState ? (nowTick - sleepState.since.getTime()) / 3600000 : 0
+  const hoursAsleep = asleep && sleepState && nowTick !== null
+    ? (nowTick - sleepState.since.getTime()) / 3600000 : 0
   const wakeEstimate = asleep && sleepState
     ? new Date(sleepState.since.getTime() + assumedSleepHours * 3600000) : null
-  const hoursAwake = waterAnchor ? Math.max(0, (nowTick - waterAnchor.getTime()) / 3600000) : 0
+  const hoursAwake = waterAnchor && nowTick !== null
+    ? Math.max(0, (nowTick - waterAnchor.getTime()) / 3600000) : 0
 
   // ---------- น้ำ (ml) ----------
   const [waterMlDelta, setWaterMlDelta] = useState(0)

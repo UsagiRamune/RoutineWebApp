@@ -12,10 +12,11 @@ interface Props {
   routine: RoutineWithDetails
   kind: CategoryKind
   today: string
+  projects: { id: string; name: string }[]
   onClose: () => void
 }
 
-export default function EditRoutinePanel({ routine, kind, today, onClose }: Props) {
+export default function EditRoutinePanel({ routine, kind, today, projects, onClose }: Props) {
   const supabase = createClient()
 
   async function rename(name: string) {
@@ -73,6 +74,10 @@ export default function EditRoutinePanel({ routine, kind, today, onClose }: Prop
     await supabase.from('routines').update({ remind_days: next }).eq('id', routine.id)
   }
 
+  async function setProject(projectId: string) {
+    await supabase.from('routines').update({ project_id: projectId || null }).eq('id', routine.id)
+  }
+
   async function removeRoutine() {
     if (!confirm(`ลบ "${routine.name}" ? (ข้อมูลย้อนหลังยังอยู่ใน history)`)) return
     await supabase.from('routines').update({ is_active: false }).eq('id', routine.id)
@@ -116,6 +121,19 @@ export default function EditRoutinePanel({ routine, kind, today, onClose }: Prop
               className="w-full bg-[#14171F] border border-[#2A2F3D] rounded-lg
                 px-3 py-1.5 text-sm outline-none focus:border-[#7C8394]" />
           </div>
+        </div>
+      )}
+
+      {kind === 'timed' && (
+        <div>
+          <label className="text-xs text-[#7C8394] block mb-1">ผูกกับโปรเจกต์</label>
+          <select defaultValue={routine.project_id ?? ''}
+            onChange={(e) => setProject(e.target.value)}
+            className="w-full bg-[#14171F] border border-[#2A2F3D] rounded-lg
+              px-3 py-1.5 text-sm outline-none focus:border-[#7C8394]">
+            <option value="">ไม่ผูก</option>
+            {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
         </div>
       )}
 

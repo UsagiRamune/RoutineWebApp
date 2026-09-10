@@ -21,6 +21,7 @@ export interface Routine {
     remind_at: string | null
     remind_enabled: boolean
     remind_days: number[]
+    project_id: string | null
 }
 
 export interface RoutineItem {
@@ -236,6 +237,93 @@ export interface EmailLog {
   error: string | null
 }
 
+// ---------- projects ----------
+
+export type ProjectStatus = 'active' | 'paused' | 'done' | 'archived'
+
+export interface Project {
+  id: string
+  name: string
+  description: string | null
+  status: ProjectStatus
+  is_solo: boolean
+  target_date: string | null
+  sort_order: number
+  created_at: string
+  google_event_id: string | null
+}
+
+export interface ProjectField {
+  id: string
+  project_id: string
+  name: string
+  color: string
+  sort_order: number
+  due_date: string | null
+  google_event_id: string | null
+}
+
+export type ProjectTaskStatus = 'todo' | 'doing' | 'done'
+
+export interface ProjectTask {
+  id: string
+  field_id: string
+  title: string
+  detail: string | null
+  status: ProjectTaskStatus
+  sort_order: number
+  created_at: string
+  completed_at: string | null
+  due_date: string | null
+  google_event_id: string | null
+}
+
+export interface ProjectSubtask {
+  id: string
+  task_id: string
+  title: string
+  done: boolean
+  sort_order: number
+  created_at: string
+  completed_at: string | null
+}
+
+export interface ProjectWorkLog {
+  id: string
+  task_id: string
+  date: string
+  minutes: number | null
+  note: string | null
+  created_at: string
+  clock_in: string | null
+  clock_out: string | null
+}
+
+export type ProjectDocSourceType = 'manual' | 'upload'
+
+export interface ProjectDoc {
+  id: string
+  project_id: string
+  title: string
+  content: string
+  source_type: ProjectDocSourceType
+  original_filename: string | null
+  updated_at: string
+}
+
+export interface TaskWithExtras extends ProjectTask {
+  project_subtasks: ProjectSubtask[]
+  project_work_logs: ProjectWorkLog[]
+}
+
+export interface FieldWithTasks extends ProjectField {
+  project_tasks: TaskWithExtras[]
+}
+
+export interface ProjectWithFields extends Project {
+  project_fields: FieldWithTasks[]
+}
+
 // ---------- health (manual entry only) ----------
 
 // เก็บ union เดิมไว้เผื่อแถวเก่าจากตอนยังมี sync (schema ไม่เปลี่ยน) แต่โค้ดฝั่งแอปเขียนแค่ 'manual' แล้ว
@@ -251,4 +339,34 @@ export interface HealthDaily {
   sleep_minutes: number | null
   source: HealthSource
   synced_at: string | null
+}
+
+// ---------- calendar cache (source of truth ฝั่งแอป — ไม่เรียก Google สดตอน read แล้ว) ----------
+
+export type CalendarCacheKind = 'event' | 'task'
+
+export interface CalendarEventCache {
+  id: string
+  google_event_id: string
+  title: string | null
+  start_at: string | null
+  end_at: string | null
+  raw: Record<string, unknown> | null
+  synced_at: string
+  calendar_id: string | null
+  calendar_name: string | null
+  all_day: boolean
+  is_birthday: boolean
+  kind: CalendarCacheKind
+  list_id: string | null
+  description: string | null
+}
+
+export interface GoogleCalendarChannel {
+  id: string
+  calendar_id: string
+  channel_id: string
+  resource_id: string
+  expiration: string
+  created_at: string
 }

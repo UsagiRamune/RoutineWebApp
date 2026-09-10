@@ -1,6 +1,8 @@
-// API ปฏิทิน+tasks: GET = ดึงทุกอย่าง, POST = สร้างอีเวนต์, PATCH = ติ๊ก task, DELETE = ลบอีเวนต์
+// API ปฏิทิน+tasks: GET = อ่านจาก cache (ไม่เรียก Google สด), POST/PATCH/DELETE = mutate สดแล้ว sync cache ตาม
 import { createClient } from '@/lib/supabase/server'
 import { calendarFor, tasksFor } from '@/lib/google/calendar'
+import { syncCalendarToCache } from '@/lib/google/calendar-sync'
+import { CalendarEventCache } from '@/lib/supabase/types'
 import { NextResponse, type NextRequest } from 'next/server'
 
 async function getConnection() {
@@ -13,99 +15,92 @@ async function getConnection() {
   return { refreshToken: data.refresh_token }
 }
 
+function cacheRowToEvent(r: CalendarEventCache) {
+  return {
+    id: r.google_event_id,
+    calendarId: r.calendar_id ?? undefined,
+    calendarName: r.calendar_name ?? '',
+    title: r.title ?? '(ไม่มีชื่อ)',
+    description: r.description ?? '',
+    start: r.start_at ?? '',
+    end: r.end_at ?? '',
+    allDay: r.all_day,
+    isBirthday: r.is_birthday,
+  }
+}
+
+function cacheRowToTask(r: CalendarEventCache) {
+  return {
+    id: r.google_event_id,
+    listId: r.list_id ?? '',
+    listName: r.calendar_name ?? '',
+    title: r.title ?? '(ไม่มีชื่อ)',
+    notes: r.description ?? '',
+    due: r.start_at ?? '',
+  }
+}
+
 export async function GET(request: NextRequest) {
   const conn = await getConnection()
   if ('error' in conn) return conn.error
   if ('notConnected' in conn) return NextResponse.json({ connected: false })
 
-    const origin = request.nextUrl.origin
-    const cal = calendarFor(origin, conn.refreshToken!)
-    const tsk = tasksFor(origin, conn.refreshToken!)
-
-    const days = Math.min(31, Math.max(1,
+  const supabase = await createClient()
+  const origin = request.nextUrl.origin
+  const days = Math.min(31, Math.max(1,
     parseInt(request.nextUrl.searchParams.get('days') ?? '7')))
-    // ตั้งใจใช้เที่ยงคืน UTC (ไม่ได้ pin Asia/Bangkok) — กว้างกว่าที่ต้องการแค่ไม่กี่ชั่วโมง
-    // ซึ่งแค่ทำให้ช่วงเวลาที่ query กว้างขึ้นเล็กน้อย ไม่กระทบความถูกต้อง
-    const dayStart = new Date(new Date().setHours(0, 0, 0, 0))
-    const horizon = new Date(dayStart.getTime() + days * 86400000)
+  const dayStart = new Date(new Date().setHours(0, 0, 0, 0))
+  const horizon = new Date(dayStart.getTime() + days * 86400000)
 
-  try {
-    // ปฏิทินทั้งหมด + task lists ทั้งหมด — ยิงพร้อมกัน
-    const [calList, taskLists] = await Promise.all([
-      cal.calendarList.list(),
-      tsk.tasklists.list().catch((err) => {
-        console.error('tasks list error:', err?.message ?? err)
-        return { data: { items: [] } }
-      }),
-    ])
-    const calendars = calList.data.items ?? []
-
-    const [eventResults, taskResults] = await Promise.all([
-      Promise.all(calendars.map(c =>
-        cal.events.list({
-          calendarId: c.id!,
-          timeMin: dayStart.toISOString(),
-          timeMax: horizon.toISOString(),
-          singleEvents: true,
-          orderBy: 'startTime',
-          maxResults: 20,
-        })
-        .then(r => (r.data.items ?? []).map(e => ({
-          id: e.id,
-          calendarId: c.id,
-          calendarName: c.summary ?? '',
-          title: e.summary ?? '(ไม่มีชื่อ)',
-          description: e.description ?? '',
-          start: e.start?.dateTime ?? e.start?.date ?? '',
-          end: e.end?.dateTime ?? '',
-          allDay: !e.start?.dateTime,
-          isBirthday: e.eventType === 'birthday' ||
-            (c.id ?? '').includes('#contacts'),
-        })))
-        .catch(() => [])
-      )),
-      Promise.all((taskLists.data.items ?? []).map(l =>
-        tsk.tasks.list({
-          tasklist: l.id!,
-          showCompleted: false,
-          maxResults: 100,
-        })
-        .then(r => (r.data.items ?? [])
-          .filter(t => t.due && new Date(t.due) < horizon)
-          .map(t => ({
-            id: t.id,
-            listId: l.id,
-            listName: l.title ?? '',
-            title: t.title ?? '(ไม่มีชื่อ)',
-            notes: t.notes ?? '',
-            due: t.due!,
-          })))
-        .catch(() => [])
-      )),
-    ])
-
-    // ปฏิทินที่เขียนได้ — ไว้ให้ฟอร์มเลือกปลายทาง
-    const writable = calendars
-      .filter(c => c.accessRole === 'owner' || c.accessRole === 'writer')
-      .map(c => ({ id: c.id, name: c.summary ?? '', primary: !!c.primary }))
-
-    // task lists — ไว้ให้ฟอร์มเลือกปลายทางตอนสร้าง task (reuse ผลจาก tsk.tasklists.list() ด้านบน)
-    const taskListOptions = (taskLists.data.items ?? [])
-      .map(l => ({ id: l.id!, name: l.title ?? '' }))
-
-    const events = eventResults.flat()
-      .sort((a, b) => a.start.localeCompare(b.start))
-      .slice(0, 30)
-    const tasks = taskResults.flat()
-      .sort((a, b) => a.due.localeCompare(b.due))
-
-    return NextResponse.json({
-      connected: true, events, tasks, writable, taskLists: taskListOptions,
-    })
-  } catch (err) {
-    console.error('calendar list error:', err)
-    return NextResponse.json({ error: 'ดึงข้อมูลไม่สำเร็จ ลองเชื่อมใหม่' }, { status: 500 })
+  // เช็คว่าเคย sync มาก่อนหรือยัง (ไม่ใช่แค่ "ช่วงวันที่ที่ขอมันว่างพอดี") — ถ้าไม่เคย sync เลยสักแถว
+  // (บัญชีเพิ่งเชื่อม แล้วยังไม่ทันมี full sync ครั้งแรกวิ่ง) ต้อง bootstrap ครั้งเดียวตรงนี้ ไม่งั้นผู้ใช้
+  // จะเห็นปฏิทินว่างเปล่าไปจนกว่า cron รายชั่วโมงจะมาถึง — เป็นข้อยกเว้นเดียวที่ GET นี้แตะ Google สด
+  const { count: totalCached } = await supabase.from('calendar_events_cache')
+    .select('id', { count: 'exact', head: true })
+  if (!totalCached || totalCached === 0) {
+    const result = await syncCalendarToCache(supabase, origin, conn.refreshToken!)
+    if (!('ok' in result) || !result.ok) {
+      console.error('calendar bootstrap sync error:', 'error' in result ? result.error : result)
+      return NextResponse.json({ error: 'sync ปฏิทินครั้งแรกไม่สำเร็จ ลองใหม่อีกที' }, { status: 500 })
+    }
   }
+
+  const { data: cacheRows, error } = await supabase.from('calendar_events_cache')
+    .select('*')
+    .gte('start_at', dayStart.toISOString())
+    .lte('start_at', horizon.toISOString())
+    .order('start_at')
+
+  if (error) {
+    console.error('calendar cache read error:', error)
+    return NextResponse.json({ error: 'ดึงข้อมูลไม่สำเร็จ' }, { status: 500 })
+  }
+
+  const rows = (cacheRows ?? []) as CalendarEventCache[]
+  const events = rows.filter(r => r.kind === 'event').map(cacheRowToEvent).slice(0, 30)
+  const tasks = rows.filter(r => r.kind === 'task').map(cacheRowToTask)
+
+  // ปฏิทิน/task list ที่เลือกเป็นปลายทางตอนสร้างใหม่ได้ — สร้างจากรายชื่อที่เห็นใน cache (ของที่มี
+  // event/task อย่างน้อย 1 รายการในช่วงที่ sync ไว้) เผื่อ 'primary' ไม่มีอะไรอยู่ในช่วงนี้เลยก็ยังเลือกได้เสมอ
+  const writableMap = new Map<string, { id: string; name: string; primary: boolean }>()
+  for (const r of rows) {
+    if (r.kind === 'event' && r.calendar_id && !writableMap.has(r.calendar_id)) {
+      writableMap.set(r.calendar_id, { id: r.calendar_id, name: r.calendar_name ?? '', primary: false })
+    }
+  }
+  if (!writableMap.has('primary')) writableMap.set('primary', { id: 'primary', name: 'ปฏิทินหลัก', primary: true })
+  const writable = Array.from(writableMap.values())
+
+  const taskListMap = new Map<string, { id: string; name: string }>()
+  for (const r of rows) {
+    if (r.kind === 'task' && r.list_id && !taskListMap.has(r.list_id)) {
+      taskListMap.set(r.list_id, { id: r.list_id, name: r.calendar_name ?? '' })
+    }
+  }
+
+  return NextResponse.json({
+    connected: true, events, tasks, writable, taskLists: Array.from(taskListMap.values()),
+  })
 }
 
 export async function POST(request: NextRequest) {
@@ -121,8 +116,11 @@ export async function POST(request: NextRequest) {
   if (!title || !date)
     return NextResponse.json({ error: 'ต้องมีชื่อและวันที่' }, { status: 400 })
 
+  const supabase = await createClient()
+  const origin = request.nextUrl.origin
+
   if (kind === 'task') {
-    const tsk = tasksFor(request.nextUrl.origin, conn.refreshToken!)
+    const tsk = tasksFor(origin, conn.refreshToken!)
     let tasklist = listId
     if (!tasklist) {
       const lists = await tsk.tasklists.list()
@@ -139,10 +137,11 @@ export async function POST(request: NextRequest) {
         due: new Date(`${date}T00:00:00`).toISOString(),
       },
     })
+    await syncCalendarToCache(supabase, origin, conn.refreshToken!)
     return NextResponse.json({ ok: true })
   }
 
-  const cal = calendarFor(request.nextUrl.origin, conn.refreshToken!)
+  const cal = calendarFor(origin, conn.refreshToken!)
 
   const event = time
     ? {
@@ -172,6 +171,7 @@ export async function POST(request: NextRequest) {
   }
 
   await cal.events.insert({ calendarId, requestBody: event })
+  await syncCalendarToCache(supabase, origin, conn.refreshToken!)
   return NextResponse.json({ ok: true })
 }
 
@@ -183,11 +183,15 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'ยังไม่ได้เชื่อมปฏิทิน' }, { status: 400 })
 
   const { taskId, listId } = await request.json()
-  const tsk = tasksFor(request.nextUrl.origin, conn.refreshToken!)
+  const origin = request.nextUrl.origin
+  const tsk = tasksFor(origin, conn.refreshToken!)
   await tsk.tasks.patch({
     tasklist: listId, task: taskId,
     requestBody: { status: 'completed' },
   })
+
+  const supabase = await createClient()
+  await syncCalendarToCache(supabase, origin, conn.refreshToken!)
   return NextResponse.json({ ok: true })
 }
 
@@ -198,7 +202,11 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'ยังไม่ได้เชื่อมปฏิทิน' }, { status: 400 })
 
   const { eventId, calendarId } = await request.json()
-  const cal = calendarFor(request.nextUrl.origin, conn.refreshToken!)
+  const origin = request.nextUrl.origin
+  const cal = calendarFor(origin, conn.refreshToken!)
   await cal.events.delete({ calendarId: calendarId ?? 'primary', eventId })
+
+  const supabase = await createClient()
+  await syncCalendarToCache(supabase, origin, conn.refreshToken!)
   return NextResponse.json({ ok: true })
 }

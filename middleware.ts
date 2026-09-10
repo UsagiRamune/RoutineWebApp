@@ -30,11 +30,13 @@ export async function middleware(request: NextRequest) {
 
     // ยังไม่ login และไม่ได้อยู่หน้า login, กำลังยืนยัน magic link/OAuth, หรือเป็น cron route
     // (cron ไม่มี user session เลย — auth เองผ่าน Authorization: Bearer CRON_SECRET ในตัว route handler) → เด้งไป /login
+    // /api/calendar/webhook ก็เหมือนกัน — Google ยิงเข้ามาตรงๆ ไม่มี session, auth เองผ่าน X-Goog-Channel-Token
     if (
         !user &&
         !request.nextUrl.pathname.startsWith('/login') &&
         !request.nextUrl.pathname.startsWith('/auth') &&
-        !request.nextUrl.pathname.startsWith('/api/cron')
+        !request.nextUrl.pathname.startsWith('/api/cron') &&
+        !request.nextUrl.pathname.startsWith('/api/calendar/webhook')
     ) {
         const url = request.nextUrl.clone()
         url.pathname = '/login'

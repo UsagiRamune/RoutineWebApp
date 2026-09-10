@@ -1,53 +1,68 @@
-'use client'
-
-// การ์ดปฏิทินบน dashboard — ดึง /api/calendar เองฝั่ง client แล้วโชว์ 2 นัดหมายถัดไป
-import { useEffect, useState } from 'react'
+// การ์ดปฏิทินบน dashboard — server component อ่านตรงจาก calendar_events_cache (Part 3) ไม่มี client
+// fetch แล้ว: เร็วกว่าเดิม (ไม่ต้องรอ round-trip ฝั่ง browser) และ stream ได้ผ่าน Suspense (Part 5)
+import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { TZ } from '@/lib/dates'
 
-interface CalEvent {
-  id: string
+interface Props {
   title: string
-  start: string
-  allDay: boolean
 }
 
-export default function CalendarCard({ title }: { title: string }) {
-  const [state, setState] =
-    useState<'loading' | 'notConnected' | 'ready' | 'error'>('loading')
-  const [events, setEvents] = useState<CalEvent[]>([])
+interface UpcomingEvent {
+  id: string
+  title: string
+  start_at: string | null
+  all_day: boolean
+}
 
-  useEffect(() => {
-    fetch('/api/calendar?days=14')
-      .then(r => r.json())
-      .then(data => {
-        if (!data.connected) { setState('notConnected'); return }
-        setEvents(data.events ?? [])
-        setState('ready')
-      })
-      .catch(() => setState('error'))
-  }, [])
+function fmt(e: UpcomingEvent) {
+  const d = new Date(e.start_at!)
+  const day = d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', timeZone: TZ })
+  if (e.all_day) return day
+  return `${day} ${d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: TZ })}`
+}
 
-  function fmt(e: CalEvent) {
-    const d = new Date(e.start)
-    const day = d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', timeZone: TZ })
-    if (e.allDay) return day
-    return `${day} ${d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: TZ })}`
+export default async function CalendarCard({ title }: Props) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  let connected = false
+  let upcoming: UpcomingEvent[] = []
+  let errored = false
+
+  if (user) {
+    const { data: conn } = await supabase.from('google_connections')
+      .select('refresh_token').eq('user_id', user.id).maybeSingle()
+    connected = !!conn
+
+    if (connected) {
+      const dayStart = new Date(new Date().setHours(0, 0, 0, 0)).toISOString()
+      const horizon = new Date(Date.now() + 14 * 86400000).toISOString()
+      const { data, error } = await supabase.from('calendar_events_cache')
+        .select('google_event_id, title, start_at, all_day')
+        .eq('kind', 'event').gte('start_at', dayStart).lte('start_at', horizon)
+        .order('start_at').limit(10)
+
+      if (error) {
+        errored = true
+      } else {
+        const now = Date.now()
+        upcoming = (data ?? [])
+          .filter(e => e.all_day || (e.start_at != null && new Date(e.start_at).getTime() >= now))
+          .slice(0, 2)
+          .map(e => ({ id: e.google_event_id, title: e.title ?? '(ไม่มีชื่อ)', start_at: e.start_at, all_day: e.all_day }))
+      }
+    }
   }
-
-  const upcoming = events
-    .filter(e => e.allDay || new Date(e.start).getTime() >= Date.now())
-    .slice(0, 2)
 
   return (
     <Link href="/calendar"
       className="block bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4
         hover:border-[#7C8394] transition-colors">
       <p className="text-sm font-medium mb-2">{title}</p>
-      {state === 'loading' && <p className="text-xs text-[#7C8394]">กำลังโหลด...</p>}
-      {state === 'notConnected' && <p className="text-xs text-[#7C8394]">เชื่อม Google Calendar</p>}
-      {state === 'error' && <p className="text-xs text-[#E4574A]">ดึงข้อมูลไม่สำเร็จ</p>}
-      {state === 'ready' && (
+      {!connected && <p className="text-xs text-[#7C8394]">เชื่อม Google Calendar</p>}
+      {connected && errored && <p className="text-xs text-[#E4574A]">ดึงข้อมูลไม่สำเร็จ</p>}
+      {connected && !errored && (
         upcoming.length === 0
           ? <p className="text-xs text-[#7C8394]">ไม่มีนัดหมายเร็วๆ นี้</p>
           : <div className="space-y-1">

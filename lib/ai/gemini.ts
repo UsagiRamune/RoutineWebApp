@@ -13,7 +13,10 @@ const SYSTEM_PROMPT = `คุณคือโค้ชวิเคราะห์
 ถ้ามีข้อมูลกิจกรรม (ก้าว/แคลจากกิจกรรม) ให้เทียบกับปริมาณอาหารที่กินและการทำ routine เพื่อหา pattern
 (เช่น วันที่เดินเยอะกินเยอะ หรือวันที่ไม่ได้ทำ routine เดินน้อยกว่าปกติ) และประเมินแบบระวังสุดเสมอ —
 ตัวเลข kcal เป็นค่าที่ผู้ใช้กรอกเองจากแอปนาฬิกา ("active calories") เท่านั้น ไม่รวมการเผาผลาญพื้นฐาน (BMR)
-ห้ามตีความว่าเป็นพลังงานที่ใช้ทั้งวัน ถ้าตัวเลขนี้ไม่ชัวร์ ให้ใช้ขอบล่างสุดที่เป็นไปได้เวลาคิดเรื่อง deficit/surplus`
+ห้ามตีความว่าเป็นพลังงานที่ใช้ทั้งวัน ถ้าตัวเลขนี้ไม่ชัวร์ ให้ใช้ขอบล่างสุดที่เป็นไปได้เวลาคิดเรื่อง deficit/surplus
+ถ้ามีข้อมูลโปรเจกต์ (คืบหน้า %, จำนวน task ที่เสร็จ, ชั่วโมงที่ track จาก routine ที่ผูกไว้) ให้เทียบชั่วโมงที่ลงกับ
+task ที่เสร็จจริง ถ้าชั่วโมงเยอะแต่ task เสร็จน้อย (หรือกลับกัน) ให้ตั้งข้อสังเกตไว้ตรงๆ ว่าตัวเลขไม่ match กัน
+โดยรายงานแค่ข้อเท็จจริงจากตัวเลข ห้ามตัดสินหรือสรุปสาเหตุเอง (อาจเป็นเพราะ task ใหญ่ใช้เวลานาน ไม่ใช่ทำงานไม่มีประสิทธิภาพ)`
 
 export const geminiProvider: AiProvider = {
   async analyzeRoutine({ periodLabel, summary }: AnalyzeInput): Promise<string> {
@@ -48,4 +51,19 @@ export async function generateJson<T = unknown>(systemPrompt: string, userText: 
   const raw = result.response.text().trim()
   const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim()
   return JSON.parse(cleaned) as T
+}
+
+// helper ทั่วไป: ส่ง system prompt + ข้อความ แล้วคืนข้อความ markdown ดิบๆ (ไม่พาร์ส JSON)
+export async function generateMarkdown(systemPrompt: string, userText: string): Promise<string> {
+  const apiKey = process.env.GEMINI_API_KEY
+  if (!apiKey) throw new Error('ยังไม่ได้ตั้ง GEMINI_API_KEY ใน .env.local')
+
+  const genAI = new GoogleGenerativeAI(apiKey)
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-3.5-flash-lite',
+    systemInstruction: systemPrompt,
+  })
+
+  const result = await model.generateContent(userText)
+  return result.response.text().trim().replace(/^```(?:markdown)?\s*/i, '').replace(/```\s*$/, '').trim()
 }

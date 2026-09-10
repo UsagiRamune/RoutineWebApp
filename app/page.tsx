@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { Module, WaterContainer } from '@/lib/supabase/types'
 import { todayKey, dateKeyOffset, getRolloverHour, TZ } from '@/lib/dates'
@@ -7,6 +8,8 @@ import AppNav from '@/components/AppNav'
 import RealtimeRefresher from '@/components/RealtimeRefresher'
 import ModuleCard from '@/components/dashboard/ModuleCard'
 import CalendarCard from '@/components/dashboard/CalendarCard'
+import ProjectsCard from '@/components/dashboard/ProjectsCard'
+import CardSkeleton from '@/components/dashboard/CardSkeleton'
 import Hero from '@/components/dashboard/Hero'
 import Link from 'next/link'
 
@@ -151,7 +154,11 @@ export default async function Dashboard() {
                 )
               }
               if (m.key === 'calendar') {
-                return <CalendarCard key={m.key} title={moduleLabel(m)} />
+                return (
+                  <Suspense key={m.key} fallback={<CardSkeleton />}>
+                    <CalendarCard title={moduleLabel(m)} />
+                  </Suspense>
+                )
               }
               if (m.key === 'nutrition') {
                 const gapText = proteinGapVal !== null && proteinGapVal > 0
@@ -174,6 +181,13 @@ export default async function Dashboard() {
                     </p>
                     <p className="text-xs text-[#7C8394] mt-1">รวมชั่วโมงจับเวลาสัปดาห์นี้</p>
                   </ModuleCard>
+                )
+              }
+              if (m.key === 'projects') {
+                return (
+                  <Suspense key={m.key} fallback={<CardSkeleton />}>
+                    <ProjectsCard title={moduleLabel(m)} weekStart={weekStart} />
+                  </Suspense>
                 )
               }
               if (m.key === 'health') {

@@ -14,9 +14,9 @@ export async function buildAnalysisSummary(supabase: any, days: number, rollover
 
   const [entries, completions, metrics, categories,
     foodEntries, waterEntries, supplementLogs, supplements, ifSettingsRes, nutritionProfileRes,
-    healthDaily] = await Promise.all([
+    healthDaily, activeProjects, projectRoutines] = await Promise.all([
     supabase.from('time_entries')
-      .select('date, clock_in, clock_out, details, routines(name, category_id, default_target_minutes)')
+      .select('routine_id, date, clock_in, clock_out, details, routines(name, category_id, default_target_minutes)')
       .gte('date', fromStr).not('clock_out', 'is', null),
     supabase.from('item_completions')
       .select('date, routine_items(name, routine_id)')
@@ -30,6 +30,11 @@ export async function buildAnalysisSummary(supabase: any, days: number, rollover
     supabase.from('if_settings').select('*').eq('id', 1).maybeSingle(),
     supabase.from('nutrition_profile').select('*').eq('id', 1).maybeSingle(),
     supabase.from('health_daily').select('date, steps, calories_burned, sleep_minutes, source').gte('date', fromStr),
+    supabase.from('projects').select(`
+      id, name,
+      project_fields ( project_tasks ( status, completed_at, project_work_logs ( date, minutes ) ) )
+    `).eq('status', 'active'),
+    supabase.from('routines').select('id, name, project_id').not('project_id', 'is', null),
   ])
 
   // ---- ย่อยข้อมูลฝั่ง server ให้เหลือแต่แก่น (ประหยัด token + โมเดลอ่านง่าย) ----
@@ -172,6 +177,53 @@ export async function buildAnalysisSummary(supabase: any, days: number, rollover
       if (h.calories_burned != null) parts.push(`แคลจากกิจกรรม ${h.calories_burned} kcal (ไม่รวม BMR)`)
       if (parts.length === 0) continue
       lines.push(`${h.date}: ${parts.join(', ')}`)
+    }
+  }
+
+  const projects = activeProjects.data ?? []
+  if (projects.length > 0) {
+    // routine ที่ผูกโปรเจกต์ไว้ → รวมนาทีที่ track ในช่วงเดียวกับที่วิเคราะห์ ต่อโปรเจกต์
+    const routineToProject = new Map<string, { projectId: string; name: string }>()
+    for (const r of projectRoutines.data ?? []) {
+      if (r.project_id) routineToProject.set(r.id, { projectId: r.project_id, name: r.name })
+    }
+    const minutesByProject = new Map<string, number>()
+    for (const e of entries.data ?? []) {
+      const link = e.routine_id ? routineToProject.get(e.routine_id) : null
+      if (!link) continue
+      const mins = Math.max(0, Math.floor(
+        (new Date(e.clock_out!).getTime() - new Date(e.clock_in).getTime()) / 60000))
+      minutesByProject.set(link.projectId, (minutesByProject.get(link.projectId) ?? 0) + mins)
+    }
+    const routineNameByProject = new Map<string, string>()
+    for (const link of routineToProject.values()) routineNameByProject.set(link.projectId, link.name)
+
+    lines.push('## โปรเจกต์ที่กำลังทำ')
+    lines.push('หมายเหตุ: "ชั่วโมงที่ track จาก routine" กับ "ชั่วโมงจาก work log" เป็นคนละแหล่งข้อมูลกัน ' +
+      'ผู้ใช้อาจ track ทั้งคู่พร้อมกันสำหรับงานเดียวกัน ห้ามเอาสองตัวเลขนี้มาบวกกันเป็นชั่วโมงรวม ' +
+      'ให้รายงานแยกกันตรงๆ เท่านั้น')
+    for (const p of projects) {
+      let done = 0, total = 0, doneInRange = 0, workLogMinutes = 0
+      for (const f of (p.project_fields as any[] ?? [])) {
+        for (const t of f.project_tasks) {
+          total++
+          if (t.status === 'done') {
+            done++
+            if (t.completed_at && t.completed_at.slice(0, 10) >= fromStr) doneInRange++
+          }
+          for (const log of (t.project_work_logs as any[] ?? [])) {
+            if (log.date >= fromStr) workLogMinutes += log.minutes ?? 0
+          }
+        }
+      }
+      const pct = total > 0 ? Math.round((done / total) * 100) : 0
+      const routineName = routineNameByProject.get(p.id)
+      const routineHours = (minutesByProject.get(p.id) ?? 0) / 60
+      const workLogHours = workLogMinutes / 60
+      let line = `${p.name}: คืบหน้า ${pct}% (${done}/${total} task), เสร็จในช่วงนี้ ${doneInRange} task`
+      if (routineName) line += `, ชั่วโมงที่ track จาก routine "${routineName}" ในช่วงนี้ ${routineHours.toFixed(1)} ชม.`
+      if (workLogMinutes > 0) line += `, ชั่วโมงจาก work log (บันทึกเวลาต่อ task) ในช่วงนี้ ${workLogHours.toFixed(1)} ชม.`
+      lines.push(line)
     }
   }
 
