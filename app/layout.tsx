@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -23,7 +24,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {/* progress bar บนสุดจอตอนเปลี่ยนหน้า — feedback ล้วนๆ ไม่เกี่ยวกับ performance จริง แค่กัน
+            navigation ที่ช้า (เช่น /calendar) ดูเหมือนค้าง ให้ทุกหน้า ไม่ใช่แค่ที่เกี่ยวกับปฏิทิน */}
+        <NextTopLoader color="#4FC1E0" height={3} showSpinner={false} shadow="0 0 10px #4FC1E0,0 0 5px #4FC1E0" />
+        {children}
+      </body>
     </html>
   );
 }

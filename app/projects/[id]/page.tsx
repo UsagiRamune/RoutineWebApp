@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { ProjectWithFields, ProjectDoc } from '@/lib/supabase/types'
 import { requireModuleEnabled } from '@/lib/modules'
 import { dateKeyOffset, todayKey, getRolloverHour } from '@/lib/dates'
@@ -16,7 +16,7 @@ export default async function ProjectPage({ params }: Props) {
   const { id } = await params
 
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await getCachedUser()
   const rollover = await getRolloverHour(supabase)
   const weekStart = dateKeyOffset(-6, rollover)
   const today = todayKey(rollover)

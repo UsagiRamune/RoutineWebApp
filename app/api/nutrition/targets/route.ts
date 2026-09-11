@@ -1,5 +1,5 @@
 // AI คำนวณเป้าแคลอรี/โปรตีน/น้ำจากน้ำหนักส่วนสูงล่าสุด + แผนที่เลือก แล้ว upsert nutrition_profile
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { generateJson } from '@/lib/ai/gemini'
 import { NutritionPlan } from '@/lib/supabase/types'
 import { NextResponse } from 'next/server'
@@ -21,7 +21,7 @@ const PLANS: NutritionPlan[] = ['cut', 'normal', 'bulk']
 export async function POST(request: Request) {
   const supabase = await createClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await getCachedUser()
   if (!user) {
     return NextResponse.json({ error: 'ยังไม่ได้เข้าสู่ระบบ' }, { status: 401 })
   }

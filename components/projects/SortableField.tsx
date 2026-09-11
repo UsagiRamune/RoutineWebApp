@@ -26,8 +26,11 @@ export default function SortableField({ id, children }: Props) {
     attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging,
   } = useSortable({ id })
 
+  // CSS.Translate (ไม่ใช่ CSS.Transform) ตัด scaleX/scaleY ที่ dnd-kit คำนวณจากขนาด item ข้างเคียงตอน
+  // reflow ออกไปเลย — ปล่อยให้ Transform เต็มๆ ทำให้การ์ดที่สูง/เตี้ยไม่เท่ากันบิดเบี้ยวตอนลาก
+  // (บั๊กที่รู้จักกันดีของ dnd-kit เอง เอกสาร/GitHub issue แนะนำให้ใช้ Translate แทนเสมอสำหรับ sortable list)
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: CSS.Translate.toString(transform),
     transition,
   }
 

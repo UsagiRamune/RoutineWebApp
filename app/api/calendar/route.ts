@@ -1,5 +1,5 @@
 // API ปฏิทิน+tasks: GET = อ่านจาก cache (ไม่เรียก Google สด), POST/PATCH/DELETE = mutate สดแล้ว sync cache ตาม
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { calendarFor, tasksFor } from '@/lib/google/calendar'
 import { syncCalendarToCache } from '@/lib/google/calendar-sync'
 import { CalendarEventCache } from '@/lib/supabase/types'
@@ -7,7 +7,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 async function getConnection() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await getCachedUser()
   if (!user) return { error: NextResponse.json({ error: 'ยังไม่ login' }, { status: 401 }) }
   const { data } = await supabase.from('google_connections')
     .select('refresh_token').eq('user_id', user.id).single()
@@ -41,7 +41,12 @@ function cacheRowToTask(r: CalendarEventCache) {
 }
 
 export async function GET(request: NextRequest) {
+  // instrumentation ชั่วคราว — หา bottleneck จริงของหน้า /calendar (รายงานว่าช้า 1-2 วิ)
+  // โฟกัสเช็คว่า path "bootstrap ถ้า cache ว่าง" ด้านล่างดันทำงานทุก request หรือเปล่า
+  // (ถ้าใช่ = ยิง Google สดทุกครั้ง อธิบายความช้าได้ตรงๆ) ดู breakdown จาก Vercel logs หลัง deploy จริง
+  const tStart = Date.now()
   const conn = await getConnection()
+  console.log(`[calendar][GET] connection check: ${Date.now() - tStart}ms`)
   if ('error' in conn) return conn.error
   if ('notConnected' in conn) return NextResponse.json({ connected: false })
 
@@ -55,21 +60,31 @@ export async function GET(request: NextRequest) {
   // เช็คว่าเคย sync มาก่อนหรือยัง (ไม่ใช่แค่ "ช่วงวันที่ที่ขอมันว่างพอดี") — ถ้าไม่เคย sync เลยสักแถว
   // (บัญชีเพิ่งเชื่อม แล้วยังไม่ทันมี full sync ครั้งแรกวิ่ง) ต้อง bootstrap ครั้งเดียวตรงนี้ ไม่งั้นผู้ใช้
   // จะเห็นปฏิทินว่างเปล่าไปจนกว่า cron รายชั่วโมงจะมาถึง — เป็นข้อยกเว้นเดียวที่ GET นี้แตะ Google สด
-  const { count: totalCached } = await supabase.from('calendar_events_cache')
+  const tBootstrapCheck = Date.now()
+  const { count: totalCached, error: countError } = await supabase.from('calendar_events_cache')
     .select('id', { count: 'exact', head: true })
+  console.log(`[calendar][GET] bootstrap count check: ${Date.now() - tBootstrapCheck}ms ` +
+    `(totalCached=${totalCached}, error=${countError?.message ?? 'none'})`)
   if (!totalCached || totalCached === 0) {
+    // *** ถ้า log นี้ขึ้นทุก request ที่ /calendar ถูกเรียก แปลว่า bootstrap ไม่ได้เกิดครั้งเดียวจริง
+    // ไปยิง Google Calendar/Tasks API สดทุกครั้ง — นี่คือผู้ต้องสงสัยอันดับ 1 ของความช้า ***
+    console.warn('[calendar][GET] *** BOOTSTRAP SYNC TRIGGERED — calling live Google APIs from this GET request ***')
+    const tBootstrap = Date.now()
     const result = await syncCalendarToCache(supabase, origin, conn.refreshToken!)
+    console.warn(`[calendar][GET] bootstrap syncCalendarToCache(): ${Date.now() - tBootstrap}ms`, result)
     if (!('ok' in result) || !result.ok) {
       console.error('calendar bootstrap sync error:', 'error' in result ? result.error : result)
       return NextResponse.json({ error: 'sync ปฏิทินครั้งแรกไม่สำเร็จ ลองใหม่อีกที' }, { status: 500 })
     }
   }
 
+  const tCacheQuery = Date.now()
   const { data: cacheRows, error } = await supabase.from('calendar_events_cache')
     .select('*')
     .gte('start_at', dayStart.toISOString())
     .lte('start_at', horizon.toISOString())
     .order('start_at')
+  console.log(`[calendar][GET] main cache query: ${Date.now() - tCacheQuery}ms (rows=${cacheRows?.length ?? 0})`)
 
   if (error) {
     console.error('calendar cache read error:', error)
@@ -97,6 +112,8 @@ export async function GET(request: NextRequest) {
       taskListMap.set(r.list_id, { id: r.list_id, name: r.calendar_name ?? '' })
     }
   }
+
+  console.log(`[calendar][GET] TOTAL: ${Date.now() - tStart}ms`)
 
   return NextResponse.json({
     connected: true, events, tasks, writable, taskLists: Array.from(taskListMap.values()),

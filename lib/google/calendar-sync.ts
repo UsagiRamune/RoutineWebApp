@@ -35,6 +35,9 @@ export type SyncResult = { ok: true; events: number; tasks: number } | { ok: fal
 export async function syncCalendarToCache(
   supabase: any, origin: string, refreshToken: string
 ): Promise<SyncResult> {
+  // instrumentation ชั่วคราว — นี่คือฟังก์ชันเดียวที่ยิง Google Calendar/Tasks API สด ถ้าที่ไหนช้า
+  // เพราะโดน sync นี้เรียกโดยไม่ควร (เช่น bootstrap ใน GET ทำงานทุก request) log พวกนี้จะฟ้องเวลาจริงให้เห็น
+  const tStart = Date.now()
   const cal = calendarFor(origin, refreshToken)
   const tsk = tasksFor(origin, refreshToken)
 
@@ -42,6 +45,7 @@ export async function syncCalendarToCache(
   const horizon = new Date(dayStart.getTime() + SYNC_WINDOW_DAYS * 86400000)
 
   try {
+    const tLists = Date.now()
     const [calList, taskLists] = await Promise.all([
       cal.calendarList.list(),
       tsk.tasklists.list().catch((err: any) => {
@@ -50,7 +54,10 @@ export async function syncCalendarToCache(
       }),
     ])
     const calendars = calList.data.items ?? []
+    console.log(`[calendar-sync] calendarList.list + tasklists.list: ${Date.now() - tLists}ms ` +
+      `(${calendars.length} calendars, ${(taskLists.data.items ?? []).length} task lists)`)
 
+    const tEvents = Date.now()
     const eventRowsNested = await Promise.all(calendars.map(async c => {
       const r = await cal.events.list({
         calendarId: c.id!,
@@ -78,7 +85,9 @@ export async function syncCalendarToCache(
         raw: e as unknown as Record<string, unknown>,
       }))
     }))
+    console.log(`[calendar-sync] events.list (all calendars): ${Date.now() - tEvents}ms`)
 
+    const tTasks = Date.now()
     const taskRowsNested = await Promise.all((taskLists.data.items ?? []).map(async l => {
       const r = await tsk.tasks.list({
         tasklist: l.id!, showCompleted: false, maxResults: 200,
@@ -103,10 +112,12 @@ export async function syncCalendarToCache(
           raw: t as unknown as Record<string, unknown>,
         }))
     }))
+    console.log(`[calendar-sync] tasks.list (all lists): ${Date.now() - tTasks}ms`)
 
     const allRows = [...eventRowsNested.flat(), ...taskRowsNested.flat()]
     const syncedAt = new Date().toISOString()
 
+    const tUpsert = Date.now()
     if (allRows.length > 0) {
       const { error: upsertError } = await supabase.from('calendar_events_cache')
         .upsert(
@@ -115,9 +126,11 @@ export async function syncCalendarToCache(
         )
       if (upsertError) return { ok: false, error: upsertError.message }
     }
+    console.log(`[calendar-sync] upsert (${allRows.length} rows): ${Date.now() - tUpsert}ms`)
 
     // ลบแถวที่หายไปจาก Google แล้ว (ไม่งั้น cache จะค้างเรื่อยๆ ไม่มีวันหมด) — แยก diff ต่อ kind
     // เพราะ event/task คนละ namespace id กัน (unique constraint คือ google_event_id+kind)
+    const tCleanup = Date.now()
     for (const kind of ['event', 'task'] as const) {
       const freshIds = allRows.filter(r => r.kind === kind).map(r => r.google_event_id)
       let del = supabase.from('calendar_events_cache').delete().eq('kind', kind)
@@ -127,6 +140,8 @@ export async function syncCalendarToCache(
       const { error: delError } = await del
       if (delError) console.error(`[calendar-sync] cleanup delete (${kind}) error:`, delError.message)
     }
+    console.log(`[calendar-sync] cleanup delete: ${Date.now() - tCleanup}ms`)
+    console.log(`[calendar-sync] TOTAL: ${Date.now() - tStart}ms`)
 
     return {
       ok: true,
@@ -134,7 +149,7 @@ export async function syncCalendarToCache(
       tasks: taskRowsNested.flat().length,
     }
   } catch (err) {
-    console.error('[calendar-sync] sync error:', err)
+    console.error(`[calendar-sync] sync error after ${Date.now() - tStart}ms:`, err)
     return { ok: false, error: err instanceof Error ? err.message : 'unknown error' }
   }
 }

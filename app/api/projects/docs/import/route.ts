@@ -1,5 +1,5 @@
 // อัปโหลดไฟล์ GDD (.pdf/.docx) → ดึงข้อความดิบ → ให้ AI จัดรูปแบบเป็น markdown → เซฟเป็น project_docs แถวใหม่
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { generateMarkdown } from '@/lib/ai/gemini'
 import { NextResponse } from 'next/server'
 
@@ -48,7 +48,7 @@ async function extractText(file: File): Promise<string> {
 
 export async function POST(request: Request) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await getCachedUser()
   if (!user) return NextResponse.json({ error: 'ยังไม่ได้เข้าสู่ระบบ' }, { status: 401 })
 
   const form = await request.formData().catch(() => null)

@@ -1,5 +1,5 @@
 // AI ประเมินแคลอรี/แมโครจากคำอธิบายคร่าวๆ — ไม่บันทึกอัตโนมัติ แค่ส่งกลับให้ผู้ใช้ยืนยัน/แก้ก่อน
-import { createClient } from '@/lib/supabase/server'
+import { getCachedUser } from '@/lib/supabase/server'
 import { generateJson } from '@/lib/ai/gemini'
 import { NextResponse } from 'next/server'
 
@@ -20,9 +20,7 @@ interface EstimateResult {
 }
 
 export async function POST(request: Request) {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await getCachedUser()
   if (!user) {
     return NextResponse.json({ error: 'ยังไม่ได้เข้าสู่ระบบ' }, { status: 401 })
   }

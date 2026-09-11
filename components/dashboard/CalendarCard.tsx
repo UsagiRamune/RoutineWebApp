@@ -1,6 +1,6 @@
 // การ์ดปฏิทินบน dashboard — server component อ่านตรงจาก calendar_events_cache (Part 3) ไม่มี client
 // fetch แล้ว: เร็วกว่าเดิม (ไม่ต้องรอ round-trip ฝั่ง browser) และ stream ได้ผ่าน Suspense (Part 5)
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCachedUser } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { TZ } from '@/lib/dates'
 
@@ -23,25 +23,34 @@ function fmt(e: UpcomingEvent) {
 }
 
 export default async function CalendarCard({ title }: Props) {
+  // instrumentation ชั่วคราว — หา bottleneck จริงของการ์ดนี้บน dashboard (รายงานว่าช้า 2-3 วิ)
+  // ดู breakdown ได้จาก Vercel function logs หลัง deploy จริง 1 ครั้ง
+  const tStart = Date.now()
+  console.log(`[CalendarCard] start at ${tStart}`)
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await getCachedUser()
+  console.log(`[CalendarCard] auth.getUser() (cached): ${Date.now() - tStart}ms`)
 
   let connected = false
   let upcoming: UpcomingEvent[] = []
   let errored = false
 
   if (user) {
+    const tConn = Date.now()
     const { data: conn } = await supabase.from('google_connections')
       .select('refresh_token').eq('user_id', user.id).maybeSingle()
+    console.log(`[CalendarCard] google_connections query: ${Date.now() - tConn}ms`)
     connected = !!conn
 
     if (connected) {
       const dayStart = new Date(new Date().setHours(0, 0, 0, 0)).toISOString()
       const horizon = new Date(Date.now() + 14 * 86400000).toISOString()
+      const tCache = Date.now()
       const { data, error } = await supabase.from('calendar_events_cache')
         .select('google_event_id, title, start_at, all_day')
         .eq('kind', 'event').gte('start_at', dayStart).lte('start_at', horizon)
         .order('start_at').limit(10)
+      console.log(`[CalendarCard] calendar_events_cache query: ${Date.now() - tCache}ms (rows=${data?.length ?? 0})`)
 
       if (error) {
         errored = true
@@ -54,6 +63,7 @@ export default async function CalendarCard({ title }: Props) {
       }
     }
   }
+  console.log(`[CalendarCard] TOTAL: ${Date.now() - tStart}ms`)
 
   return (
     <Link href="/calendar"

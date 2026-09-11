@@ -1,5 +1,5 @@
 // จัดการกำหนดส่งของ project/field/task: POST = บันทึก due_date + sync ปฏิทิน, DELETE = cleanup event ก่อนลบแถวจริง
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCachedUser } from '@/lib/supabase/server'
 import {
   syncDeadlineEvent, cleanupProjectCalendarEvents, cleanupFieldCalendarEvents, deleteDeadlineEventIfAny,
   type DeadlineKind,
@@ -19,7 +19,7 @@ function isValidKind(kind: unknown): kind is DeadlineKind {
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await getCachedUser()
   if (!user) return NextResponse.json({ error: 'ยังไม่ได้เข้าสู่ระบบ' }, { status: 401 })
 
   const { kind, id, due_date } = await request.json().catch(() => ({}))
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await getCachedUser()
   if (!user) return NextResponse.json({ error: 'ยังไม่ได้เข้าสู่ระบบ' }, { status: 401 })
 
   const { kind, id } = await request.json().catch(() => ({}))

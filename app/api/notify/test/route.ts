@@ -1,12 +1,12 @@
 // ส่งเมลทดสอบ — บายพาส gate ปกติของ sendEmail (max_per_day/min_gap/dedupe) แต่ยังต้อง login
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { emailTemplate } from '@/lib/notify/template'
 import { Resend } from 'resend'
 import { NextResponse } from 'next/server'
 
 export async function POST() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await getCachedUser()
   if (!user) return NextResponse.json({ error: 'ยังไม่ได้เข้าสู่ระบบ' }, { status: 401 })
 
   const { data: appSettings } = await supabase.from('app_settings').select('notify_email').eq('id', 1).maybeSingle()

@@ -1,5 +1,5 @@
 // Google เด้งกลับมาที่นี่พร้อม code → แลกเป็น token แล้วเก็บ + sync cache ครั้งแรก + ลงทะเบียน push channel
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { oauthClient } from '@/lib/google/calendar'
 import { syncCalendarToCache } from '@/lib/google/calendar-sync'
 import { registerPrimaryCalendarChannel } from '@/lib/google/calendar-channel'
@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   if (!code) return NextResponse.redirect(new URL('/', request.url))
 
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await getCachedUser()
   if (!user) return NextResponse.redirect(new URL('/login', request.url))
 
   const client = oauthClient(request.nextUrl.origin)

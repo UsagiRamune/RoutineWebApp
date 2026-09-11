@@ -10,11 +10,16 @@ interface Props {
 }
 
 export default async function ProjectsCard({ title, weekStart }: Props) {
+  // instrumentation ชั่วคราว — timestamp เริ่ม/จบ เทียบกับของ CalendarCard ใน Vercel logs หลัง deploy
+  // จริง เพื่อยืนยันว่าสอง Suspense boundary นี้รันพร้อมกันจริง (เริ่มเวลาใกล้กัน) ไม่ใช่ทำทีละตัว
+  const tStart = Date.now()
+  console.log(`[ProjectsCard] start at ${tStart}`)
   const supabase = await createClient()
   const { data: projectsRes } = await supabase.from('projects').select(`
     id, name, sort_order,
     project_fields ( project_tasks ( status, completed_at ) )
   `).eq('status', 'active').order('sort_order')
+  console.log(`[ProjectsCard] TOTAL: ${Date.now() - tStart}ms`)
 
   // โปรเจกต์ที่มี task เสร็จในสัปดาห์นี้มากที่สุด — ตัวแทนที่น่าสนใจที่สุดให้โชว์บนการ์ดเดียว
   const activeProjects = (projectsRes ?? []).map(p => {
