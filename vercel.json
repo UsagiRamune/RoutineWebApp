@@ -2,5 +2,6 @@
   "crons": [
     { "path": "/api/cron/daily", "schedule": "0 1 * * *" },
     { "path": "/api/cron/weekly", "schedule": "0 12 * * 0" }
-  ]
+  ],
+  "regions": ["bom1"]
 }
