@@ -1,9 +1,21 @@
 'use client'
 
-// แผงปฏิทิน: อีเวนต์ 7 วันข้างหน้า + เพิ่ม/ลบ (sync ตรงกับ Google Calendar)
-import { useEffect, useState, useCallback } from 'react'
-import { CalendarDays, CheckSquare, Plus, X } from 'lucide-react'
+// แผงปฏิทิน: อีเวนต์ 7 วันข้างหน้า + เพิ่ม/ลบ (sync ตรงกับ Google Calendar) + มุมมองตารางเดือน
+import { useEffect, useState, useCallback, useMemo } from 'react'
+import {
+  startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval,
+  isSameMonth, isToday, addMonths, subMonths,
+} from 'date-fns'
+import { CalendarDays, CheckSquare, Plus, X, ChevronLeft, ChevronRight, Grid3x3 } from 'lucide-react'
 import { TZ } from '@/lib/dates'
+
+const WEEKDAY_LABELS = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส']
+
+// วันที่แบบ "YYYY-MM-DD" ตาม timezone ของแอป (Asia/Bangkok) — ใช้ตรงกับ pattern เดียวกับ lib/dates.ts
+// (toLocaleDateString('sv-SE', ...) ให้ format ISO date ตรงๆ) กันปัญหา event ใกล้เที่ยงคืนเพี้ยนวัน
+function dayKeyOf(iso: string): string {
+  return new Date(iso).toLocaleDateString('sv-SE', { timeZone: TZ })
+}
 
 interface CalEvent {
   id: string
@@ -36,10 +48,19 @@ export default function CalendarPanel() {
     repeat: 'none', repeatUntil: '',
   })
   const [days, setDays] = useState(7)
+  const [viewMode, setViewMode] = useState<'agenda' | 'grid'>('agenda')
+  // เดือนที่กำลังโชว์ในมุมมองตาราง — ตั้งต้นเดือนนี้เสมอ (ตัด time ทิ้ง ใช้แค่ปี/เดือนอ้างอิง)
+  const [gridMonth, setGridMonth] = useState(() => startOfMonth(new Date()))
+  const [selectedGridDay, setSelectedGridDay] = useState<string | null>(null)
+
+  // มุมมองตาราง fetch ข้อมูลกว้างสุดที่ API รองรับเสมอ (31 วันข้างหน้า) ไม่ผูกกับ toggle 7/30 วันของ
+  // agenda — ปฏิทิน cache ฝั่ง server เก็บแค่หน้าต่างวันข้างหน้าเท่านั้น (ไม่มีข้อมูลย้อนหลัง) ดังนั้นเดือน
+  // ก่อนหน้าเดือนปัจจุบันจะไม่มีข้อมูลให้โชว์จริงๆ — ปุ่มเดือนก่อนหน้าเลย disable ไว้ตรงๆ ไม่ทำ grid ว่างเปล่าหลอกตา
+  const effectiveDays = viewMode === 'grid' ? 31 : days
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`/api/calendar?days=${days}`)
+      const res = await fetch(`/api/calendar?days=${effectiveDays}`)
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       if (!data.connected) { setState('notConnected'); return }
@@ -50,7 +71,7 @@ export default function CalendarPanel() {
     } catch {
       setState('error')
     }
-  }, [days])
+  }, [effectiveDays])
 
   useEffect(() => { load() }, [load])
 
@@ -59,6 +80,41 @@ export default function CalendarPanel() {
     if (taskLists.length > 0 && !form.listId)
       setForm(p => ({ ...p, listId: taskLists[0].id }))
   }, [taskLists, form.listId])
+
+  // ---------- month grid ----------
+
+  // ขอบเขตเดือนที่กดย้อน/ถัดไปได้จริง — cache ฝั่ง server มีแค่ "วันนี้ถึงอีก 31 วันข้างหน้า" เท่านั้น
+  // (ไม่มีข้อมูลย้อนหลัง) เดือนก่อนเดือนปัจจุบันเลย disable ตรงๆ กันโชว์ตารางว่างเปล่าหลอกว่า "ไม่มีนัดหมาย"
+  const minGridMonth = startOfMonth(new Date())
+  const maxGridMonth = startOfMonth(new Date(Date.now() + 31 * 86400000))
+
+  // รวม event+task ต่อวัน (key "YYYY-MM-DD") ไว้ที่เดียว ให้ grid cell เช็คว่าวันนั้นมีอะไรบ้างได้เร็ว
+  const itemsByDay = useMemo(() => {
+    const map = new Map<string, { events: CalEvent[]; tasks: GTask[] }>()
+    for (const e of events) {
+      const key = dayKeyOf(e.start)
+      if (!map.has(key)) map.set(key, { events: [], tasks: [] })
+      map.get(key)!.events.push(e)
+    }
+    for (const t of tasks) {
+      const key = dayKeyOf(t.due)
+      if (!map.has(key)) map.set(key, { events: [], tasks: [] })
+      map.get(key)!.tasks.push(t)
+    }
+    return map
+  }, [events, tasks])
+
+  // เซลล์ทั้งหมดของตาราง — ครอบทั้งสัปดาห์แรก/สุดท้าย (รวมวันของเดือนก่อน/ถัดไปที่โผล่มาเติมแถวให้ครบ)
+  const gridDays = useMemo(() => {
+    const start = startOfWeek(gridMonth, { weekStartsOn: 0 })
+    const end = endOfWeek(endOfMonth(gridMonth), { weekStartsOn: 0 })
+    return eachDayOfInterval({ start, end })
+  }, [gridMonth])
+
+  function gridDayKey(d: Date): string {
+    // เซลล์ในตารางไม่มีเวลา ใช้ local date ของ browser ตรงๆ พอ (ผู้ใช้แอปนี้อยู่โซนเดียวกับ TZ ที่ตั้งไว้)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
 
   async function addEvent() {
     if (!form.title.trim() || !form.date) return
@@ -134,13 +190,20 @@ export default function CalendarPanel() {
         <div className="flex items-center gap-2">
           <div className="flex rounded-md border border-[#2A2F3D] overflow-hidden text-[10px]">
             {[7, 30].map(d => (
-              <button key={d} onClick={() => setDays(d)}
-                className={`px-2 py-1 ${days === d
+              <button key={d} onClick={() => { setViewMode('agenda'); setDays(d) }}
+                className={`px-2 py-1 ${viewMode === 'agenda' && days === d
                   ? 'bg-[#EDEAE0] text-[#14171F] font-semibold'
                   : 'text-[#7C8394]'}`}>
                 {d === 7 ? '7 วัน' : 'เดือน'}
               </button>
             ))}
+            <button onClick={() => setViewMode('grid')}
+              title="มุมมองตาราง"
+              className={`px-2 py-1 flex items-center gap-1 ${viewMode === 'grid'
+                ? 'bg-[#EDEAE0] text-[#14171F] font-semibold'
+                : 'text-[#7C8394]'}`}>
+              <Grid3x3 size={11} />
+            </button>
           </div>
           {state === 'ready' && (
             <button onClick={() => setAdding(a => !a)}
@@ -164,41 +227,133 @@ export default function CalendarPanel() {
 
       {state === 'ready' && (
         <>
-          {tasks.length === 0 && events.length === 0 && (
-            <p className="text-xs text-[#7C8394] mt-1">ว่าง ไม่มีอีเวนต์ 7 วันนี้</p>
+          {viewMode === 'agenda' && (
+            <>
+              {tasks.length === 0 && events.length === 0 && (
+                <p className="text-xs text-[#7C8394] mt-1">ว่าง ไม่มีอีเวนต์ 7 วันนี้</p>
+              )}
+              {tasks.map(t => (
+                <div key={t.id} className="flex items-center gap-2 py-1">
+                  <button onClick={() => completeTask(t)} title="ทำเสร็จแล้ว"
+                    className="text-[#7C8394] hover:text-[#4FC1E0] flex-shrink-0">
+                    <CheckSquare size={14} />
+                  </button>
+                  <span className="text-xs text-[#7C8394] w-24 flex-shrink-0 tabular-nums">
+                    {fmtTaskDue(t.due)}
+                  </span>
+                  <span className="text-sm flex-1 min-w-0 truncate">
+                    {t.title}
+                    <span className="text-[10px] text-[#7C8394] ml-1.5">☑ {t.listName}</span>
+                  </span>
+                </div>
+              ))}
+              {events.map(e => (
+                <div key={e.id} className="flex items-center gap-2 py-1">
+                  <span className="text-xs text-[#7C8394] w-28 flex-shrink-0 tabular-nums">
+                    {fmtEvent(e)}
+                  </span>
+                  <span className="text-sm flex-1 min-w-0 truncate">
+                    {e.title}
+                    {e.calendarName && e.calendarId !== 'primary' && (
+                      <span className="text-[10px] text-[#7C8394] ml-1.5">({e.calendarName})</span>
+                    )}
+                    </span>
+                  <button onClick={() => removeEvent(e.id)}
+                    className="text-[#7C8394] p-1 w-7 flex justify-center flex-shrink-0">
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+            </>
           )}
-          {tasks.map(t => (
-            <div key={t.id} className="flex items-center gap-2 py-1">
-              <button onClick={() => completeTask(t)} title="ทำเสร็จแล้ว"
-                className="text-[#7C8394] hover:text-[#4FC1E0] flex-shrink-0">
-                <CheckSquare size={14} />
-              </button>
-              <span className="text-xs text-[#7C8394] w-24 flex-shrink-0 tabular-nums">
-                {fmtTaskDue(t.due)}
-              </span>
-              <span className="text-sm flex-1 min-w-0 truncate">
-                {t.title}
-                <span className="text-[10px] text-[#7C8394] ml-1.5">☑ {t.listName}</span>
-              </span>
+
+          {viewMode === 'grid' && (
+            <div className="mt-2">
+              <div className="flex items-center justify-between mb-2">
+                <button onClick={() => setGridMonth(m => subMonths(m, 1))}
+                  disabled={gridMonth.getTime() <= minGridMonth.getTime()}
+                  className="p-1 rounded text-[#7C8394] disabled:opacity-30 disabled:cursor-not-allowed">
+                  <ChevronLeft size={16} />
+                </button>
+                <p className="text-xs font-medium">
+                  {gridMonth.toLocaleDateString('th-TH', { month: 'long', year: 'numeric', timeZone: TZ })}
+                </p>
+                <button onClick={() => setGridMonth(m => addMonths(m, 1))}
+                  disabled={gridMonth.getTime() >= maxGridMonth.getTime()}
+                  className="p-1 rounded text-[#7C8394] disabled:opacity-30 disabled:cursor-not-allowed">
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-7 gap-1 mb-1">
+                {WEEKDAY_LABELS.map(l => (
+                  <p key={l} className="text-center text-[10px] text-[#7C8394]">{l}</p>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {gridDays.map(d => {
+                  const key = gridDayKey(d)
+                  const inMonth = isSameMonth(d, gridMonth)
+                  const dayItems = itemsByDay.get(key)
+                  const count = (dayItems?.events.length ?? 0) + (dayItems?.tasks.length ?? 0)
+                  const selected = selectedGridDay === key
+                  return (
+                    <button key={key} disabled={!inMonth}
+                      onClick={() => setSelectedGridDay(selected ? null : key)}
+                      className={`aspect-square rounded-lg flex flex-col items-center justify-center gap-0.5
+                        text-xs transition-colors
+                        ${!inMonth ? 'text-[#2A2F3D] cursor-default'
+                          : selected ? 'bg-[#4FC1E0] text-[#14171F] font-semibold' : 'text-[#EDEAE0] hover:bg-[#14171F]'}
+                        ${isToday(d) && !selected ? 'ring-1 ring-inset ring-[#4FC1E0]' : ''}`}>
+                      <span>{d.getDate()}</span>
+                      {count > 0 && (
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0
+                          ${selected ? 'bg-[#14171F]' : 'bg-[#4FC1E0]'}`} />
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {selectedGridDay && (() => {
+                const dayItems = itemsByDay.get(selectedGridDay)
+                const dayEvents = dayItems?.events ?? []
+                const dayTasksList = dayItems?.tasks ?? []
+                return (
+                  <div className="mt-3 pt-3 border-t border-[#2A2F3D]">
+                    <p className="text-xs text-[#7C8394] mb-1.5">
+                      {new Date(selectedGridDay).toLocaleDateString('th-TH',
+                        { weekday: 'long', day: 'numeric', month: 'long', timeZone: TZ })}
+                    </p>
+                    {dayEvents.length === 0 && dayTasksList.length === 0 ? (
+                      <p className="text-xs text-[#7C8394]">ไม่มีนัดหมาย</p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {dayTasksList.map(t => (
+                          <div key={t.id} className="flex items-center gap-2">
+                            <CheckSquare size={12} className="text-[#7C8394] flex-shrink-0" />
+                            <span className="text-sm flex-1 min-w-0 truncate">
+                              {t.title}
+                              <span className="text-[10px] text-[#7C8394] ml-1.5">☑ {t.listName}</span>
+                            </span>
+                          </div>
+                        ))}
+                        {dayEvents.map(e => (
+                          <div key={e.id} className="flex items-center gap-2">
+                            <span className="text-xs text-[#7C8394] w-14 flex-shrink-0 tabular-nums">
+                              {e.allDay ? 'ทั้งวัน' : new Date(e.start).toLocaleTimeString('th-TH',
+                                { hour: '2-digit', minute: '2-digit', timeZone: TZ })}
+                            </span>
+                            <span className="text-sm flex-1 min-w-0 truncate">{e.title}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
             </div>
-          ))}
-          {events.map(e => (
-            <div key={e.id} className="flex items-center gap-2 py-1">
-              <span className="text-xs text-[#7C8394] w-28 flex-shrink-0 tabular-nums">
-                {fmtEvent(e)}
-              </span>
-              <span className="text-sm flex-1 min-w-0 truncate">
-                {e.title}
-                {e.calendarName && e.calendarId !== 'primary' && (
-                  <span className="text-[10px] text-[#7C8394] ml-1.5">({e.calendarName})</span>
-                )}
-                </span>
-              <button onClick={() => removeEvent(e.id)}
-                className="text-[#7C8394] p-1 w-7 flex justify-center flex-shrink-0">
-                <X size={12} />
-              </button>
-            </div>
-          ))}
+          )}
 
           {adding && (
             <div className="mt-2 space-y-2">

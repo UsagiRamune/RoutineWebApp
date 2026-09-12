@@ -21,6 +21,12 @@ import ReactMarkdown from 'react-markdown'
 
 type ViewMode = 'week' | 'month' | 'year'
 
+// ปุ่มลบ: จอสัมผัสไม่มี hover state เลยต้องโชว์ตลอด ส่วนจอ desktop (มี mouse จริง) ค่อยซ่อนแล้วโชว์ตอน
+// hover/focus แถว — เช็คด้วย media feature (hover: hover) ตรงๆ ไม่ใช้ Tailwind hover: เฉยๆ เพราะอันนั้น
+// เป็น :hover ธรรมดา ทำงานทั้งจอสัมผัสด้วย (กดค้างแล้วปุ่มเด้งโผล่ผิดจังหวะ)
+const DELETE_HOVER_REVEAL = 'transition-opacity opacity-100 [@media(hover:hover)]:opacity-0 ' +
+  '[@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus-visible:opacity-100'
+
 interface Props {
   view: ViewMode
   today: string
@@ -42,6 +48,7 @@ export default function HistoryView({
     const [selectedDay, setSelectedDay] = useState<string | null>(today)
     const [aiState, setAiState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
     const [aiText, setAiText] = useState('')
+    const [entryError, setEntryError] = useState<{ id: string; message: string } | null>(null)
 
   // ---------- aggregate ----------
 
@@ -169,6 +176,14 @@ export default function HistoryView({
     field: 'clock_in' | 'clock_out', hhmm: string) {
     if (!hhmm) return
     const iso = new Date(`${e.date}T${hhmm}:00`).toISOString()
+    const clockIn = field === 'clock_in' ? iso : e.clock_in
+    const clockOut = field === 'clock_out' ? iso : e.clock_out
+    // กัน clock_out ก่อน clock_in (หรือกลับกัน) — เคยทำให้ analyze คำนวณ duration ติดลบมาแล้วจริงๆ
+    if (clockOut && new Date(clockOut).getTime() <= new Date(clockIn).getTime()) {
+      setEntryError({ id: e.id, message: 'เวลาสิ้นสุดต้องมาหลังเวลาเริ่ม' })
+      return
+    }
+    setEntryError(null)
     await supabase.from('time_entries').update({ [field]: iso }).eq('id', e.id)
     router.refresh()
   }
@@ -385,7 +400,7 @@ export default function HistoryView({
             )}
 
             {dayEntries.map(e => (
-              <div key={e.id} className="border-t border-[#2A2F3D] py-2">
+              <div key={e.id} className="group border-t border-[#2A2F3D] py-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm">{e.routines?.name ?? '?'}</span>
                   <input type="time" defaultValue={fmtHHMM(e.clock_in)}
@@ -398,16 +413,19 @@ export default function HistoryView({
                     onBlur={ev => editEntryTime(e, 'clock_out', ev.target.value)}
                     className="bg-[#14171F] border border-[#2A2F3D] rounded px-2 py-0.5
                       text-xs outline-none" />
+                  {entryError?.id === e.id && (
+                    <p className="w-full text-[10px] text-[#E4574A]">{entryError.message}</p>
+                  )}
                   <button onClick={() => deleteEntry(e.id)}
-                    className="text-[#E4574A] ml-auto p-1 w-7 flex justify-center flex-shrink-0">
-                    <X size={12} />
+                    className={`text-[#E4574A] ml-auto p-1 w-7 flex justify-center flex-shrink-0 ${DELETE_HOVER_REVEAL}`}>
+                    <X size={14} />
                     </button>
                 </div>
 
                 {/* topics — แก้ย้อนหลังได้เหมือนหน้า Today */}
                 {e.details.map(topic => (
                   <div key={topic.id} className="ml-2 mt-1">
-                    <div className="flex items-center gap-1.5">
+                    <div className="group flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#7C8394] flex-shrink-0" />
                       <input defaultValue={topic.title}
                         onBlur={ev => ev.target.value !== topic.title && saveDetails(e.id,
@@ -417,12 +435,12 @@ export default function HistoryView({
                           border-b border-transparent focus:border-[#2A2F3D]" />
                       <button onClick={() => saveDetails(e.id,
                         e.details.filter(t => t.id !== topic.id))}
-                        className="text-[#7C8394] p-1 w-7 flex justify-center flex-shrink-0">
-                        <X size={12} />
+                        className={`text-[#7C8394] p-1 w-7 flex justify-center flex-shrink-0 ${DELETE_HOVER_REVEAL}`}>
+                        <X size={14} />
                       </button>
                     </div>
                     {topic.subs.map(sub => (
-                      <div key={sub.id} className="flex items-center gap-1.5">
+                      <div key={sub.id} className="group flex items-center gap-1.5">
                         <span className="text-[#7C8394] text-xs ml-5">•</span>
                         <input defaultValue={sub.text}
                           onBlur={ev => ev.target.value !== sub.text && saveDetails(e.id,
@@ -434,8 +452,8 @@ export default function HistoryView({
                         <button onClick={() => saveDetails(e.id,
                           e.details.map(t => t.id === topic.id
                             ? { ...t, subs: t.subs.filter(s => s.id !== sub.id) } : t))}
-                          className="text-[#7C8394] p-1 w-7 flex justify-center flex-shrink-0">
-                          <X size={12} />
+                          className={`text-[#7C8394] p-1 w-7 flex justify-center flex-shrink-0 ${DELETE_HOVER_REVEAL}`}>
+                          <X size={14} />
                         </button>
                       </div>
                     ))}

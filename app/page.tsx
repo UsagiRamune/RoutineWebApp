@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { Module, WaterContainer } from '@/lib/supabase/types'
-import { todayKey, dateKeyOffset, getRolloverHour, TZ } from '@/lib/dates'
+import { todayKey, dateKeyOffset, getRolloverHour, bangkokNow, TZ } from '@/lib/dates'
 import { weightAsOf } from '@/lib/nutrition'
 import { moduleLabel } from '@/lib/moduleLabels'
 import AppNav from '@/components/AppNav'
@@ -19,10 +19,11 @@ export default async function Dashboard() {
   const today = todayKey(rollover)
   const weekStart = dateKeyOffset(-6, rollover)
   const yesterday = dateKeyOffset(-1, rollover)
+  const { weekday } = bangkokNow()
 
   const [
     modulesRes, categoriesRes, weekEntriesRes, foodRes, waterRes, ifRes, profileRes, healthRes,
-    latestWeightRes, weightWindowRes, containersRes, appSettingsRes,
+    latestWeightRes, weightWindowRes, containersRes, appSettingsRes, workoutDayRes, workoutSessionRes,
   ] = await Promise.all([
     supabase.from('modules').select('*').eq('enabled', true).order('sort_order'),
     supabase.from('routine_categories').select(`
@@ -44,6 +45,11 @@ export default async function Dashboard() {
     supabase.from('body_metrics').select('date, weight_kg').gte('date', dateKeyOffset(-10, rollover)).order('date'),
     supabase.from('water_containers').select('*').eq('is_active', true).order('sort_order'),
     supabase.from('app_settings').select('*').eq('id', 1).maybeSingle(),
+    supabase.from('workout_days').select('label, kind').eq('day_of_week', weekday).maybeSingle(),
+    // ใช้ order+limit(1) แทน .eq('date',today).maybeSingle() เฉยๆ — กันพังถ้าวันเดียวกันมีมากกว่า 1 แถว
+    // (เช่นเริ่มใหม่หลังกด "จบตอนนี้" ไปแล้ว) เอาแถวล่าสุดพอ
+    supabase.from('workout_sessions').select('completed_at, active_minutes')
+      .eq('date', today).order('started_at', { ascending: false }).limit(1).maybeSingle(),
   ])
 
   const modules = (modulesRes.data ?? []) as Module[]
@@ -188,6 +194,28 @@ export default async function Dashboard() {
                   <Suspense key={m.key} fallback={<CardSkeleton />}>
                     <ProjectsCard title={moduleLabel(m)} weekStart={weekStart} />
                   </Suspense>
+                )
+              }
+              if (m.key === 'workout') {
+                const wDay = workoutDayRes.data
+                const wSession = workoutSessionRes.data
+                // วันพักไม่โชว์สถานะ session เลย ต่อให้บังเอิญมีแถวค้างอยู่ (ไม่ควรเกิด แต่กันไว้)
+                const isRest = !wDay || wDay.kind === 'rest'
+                return (
+                  <ModuleCard key={m.key} href="/workout" title={moduleLabel(m)}>
+                    <p className="text-sm font-medium truncate">{wDay?.label ?? '—'}</p>
+                    {isRest ? (
+                      <p className="text-xs text-[#7C8394] mt-1">วันพัก</p>
+                    ) : wSession?.completed_at ? (
+                      <p className="text-sm text-[#4FC1E0] mt-1">
+                        เล่นแล้ว {wSession.active_minutes ?? '?'} นาที ✓
+                      </p>
+                    ) : wSession ? (
+                      <p className="text-sm text-[#F0A345] mt-1">เล่นค้างไว้ — เล่นต่อ</p>
+                    ) : (
+                      <p className="text-xs text-[#7C8394] mt-1">ยังไม่ได้เล่น</p>
+                    )}
+                  </ModuleCard>
                 )
               }
               if (m.key === 'health') {

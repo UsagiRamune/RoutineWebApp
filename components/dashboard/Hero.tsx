@@ -257,7 +257,8 @@ export default function Hero({
 
           {/* row 3: สรุปย่อ น้ำหนัก/ก้าว/น้ำ */}
           <div className="grid grid-cols-3 gap-2 pt-3 mt-3 border-t border-[#2A2F3D]">
-            <Link href="/health" className="text-center">
+            {/* prefetch={false} — ลิงก์นี้อยู่ในจอแรกของ dashboard เหมือนกัน กัน prefetch ยิงพร้อมการ์ดอื่น */}
+            <Link href="/health" prefetch={false} className="text-center">
               <p className="text-sm font-semibold tabular-nums"
                 style={{ color: weightDeltaColor(weightDelta7, plan) }}>
                 {latestWeight != null ? latestWeight.toFixed(1) : '—'}

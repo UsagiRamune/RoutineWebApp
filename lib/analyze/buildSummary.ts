@@ -14,7 +14,8 @@ export async function buildAnalysisSummary(supabase: any, days: number, rollover
 
   const [entries, completions, metrics, categories,
     foodEntries, waterEntries, supplementLogs, supplements, ifSettingsRes, nutritionProfileRes,
-    healthDaily, activeProjects, projectRoutines] = await Promise.all([
+    healthDaily, activeProjects, projectRoutines, workoutDaysRes, workoutSessionsRes,
+    workoutExercisesRes] = await Promise.all([
     supabase.from('time_entries')
       .select('routine_id, date, clock_in, clock_out, details, routines(name, category_id, default_target_minutes)')
       .gte('date', fromStr).not('clock_out', 'is', null),
@@ -35,6 +36,10 @@ export async function buildAnalysisSummary(supabase: any, days: number, rollover
       project_fields ( project_tasks ( status, completed_at, project_work_logs ( date, minutes ) ) )
     `).eq('status', 'active'),
     supabase.from('routines').select('id, name, project_id').not('project_id', 'is', null),
+    supabase.from('workout_days').select('day_of_week, label, kind'),
+    supabase.from('workout_sessions')
+      .select('date, completed_at, active_minutes, exercises_skipped').gte('date', fromStr),
+    supabase.from('workout_exercises').select('id, name'),
   ])
 
   // ---- ย่อยข้อมูลฝั่ง server ให้เหลือแต่แก่น (ประหยัด token + โมเดลอ่านง่าย) ----
@@ -224,6 +229,58 @@ export async function buildAnalysisSummary(supabase: any, days: number, rollover
       if (routineName) line += `, ชั่วโมงที่ track จาก routine "${routineName}" ในช่วงนี้ ${routineHours.toFixed(1)} ชม.`
       if (workLogMinutes > 0) line += `, ชั่วโมงจาก work log (บันทึกเวลาต่อ task) ในช่วงนี้ ${workLogHours.toFixed(1)} ชม.`
       lines.push(line)
+    }
+  }
+
+  // ---- ออกกำลังกาย (Workout Player): วันที่วางแผน (หนัก/เบา ไม่นับวันพัก) เทียบวันที่เล่นจริง ----
+  const workoutDaysByWeekday = new Map<number, { label: string; kind: string }>(
+    (workoutDaysRes.data ?? []).map((d: any) => [d.day_of_week, { label: d.label, kind: d.kind }]))
+  const workoutSessionsByDate = new Map<string, any>(
+    (workoutSessionsRes.data ?? []).map((s: any) => [s.date, s]))
+  const todayStr = dateKeyOffset(0, rollover)
+  const totalRangeDays = Math.min(days, 90)
+  // เดินวันที่ตั้งแต่ fromStr ถึงวันนี้ตามลำดับเวลา หา weekday ของแต่ละวันแบบ TZ-independent
+  // (parse/read เป็น UTC ล้วนๆ ทั้งคู่ — "วันที่ปฏิทิน" ไม่ขึ้นกับ timezone อยู่แล้ว)
+  const rangeDates = Array.from({ length: totalRangeDays + 1 }, (_, i) =>
+    dateKeyOffset(-(totalRangeDays - i), rollover))
+
+  const plannedRows: string[] = []
+  let plannedCount = 0, completedCount = 0, totalActiveMinutes = 0
+  for (const date of rangeDates) {
+    if (date > todayStr) continue
+    const weekday = new Date(`${date}T00:00:00Z`).getUTCDay()
+    const plan = workoutDaysByWeekday.get(weekday)
+    if (!plan || plan.kind === 'rest') continue
+    plannedCount++
+    const session = workoutSessionsByDate.get(date)
+    const done = !!session?.completed_at
+    if (done) {
+      completedCount++
+      totalActiveMinutes += session.active_minutes ?? 0
+    }
+    plannedRows.push(`${date} (${plan.label}, ${plan.kind === 'heavy' ? 'วันหนัก' : 'วันเบา'}): ` +
+      (done ? `เล่นแล้ว ${session.active_minutes ?? '?'} นาที` : 'ยังไม่ได้เล่น'))
+  }
+
+  if (plannedCount > 0) {
+    const exerciseNameById = new Map<string, string>(
+      (workoutExercisesRes.data ?? []).map((e: any) => [e.id, e.name]))
+    const skipCounts = new Map<string, number>()
+    for (const s of workoutSessionsRes.data ?? []) {
+      for (const sk of (s.exercises_skipped as any[] ?? [])) {
+        const name = exerciseNameById.get(sk.exercise_id) ?? sk.exercise_id
+        skipCounts.set(name, (skipCounts.get(name) ?? 0) + 1)
+      }
+    }
+    const recurringSkips = [...skipCounts.entries()].filter(([, c]) => c >= 3).sort((a, b) => b[1] - a[1])
+
+    lines.push('## ออกกำลังกาย (Workout Player)')
+    lines.push(`เล่นจริง ${completedCount}/${plannedCount} วันที่วางแผนไว้ (ไม่นับวันพัก) ` +
+      `รวมเวลาที่เล่นจริงในช่วงนี้ ${totalActiveMinutes} นาที`)
+    lines.push(...plannedRows)
+    if (recurringSkips.length > 0) {
+      lines.push('ท่าที่ถูกข้ามซ้ำๆ (3 ครั้งขึ้นไปในช่วงนี้ — แค่รายงานข้อเท็จจริง ไม่ได้แปลว่าต้องแก้อะไร):')
+      lines.push(...recurringSkips.map(([name, c]) => `${name}: ข้าม ${c} ครั้ง`))
     }
   }
 

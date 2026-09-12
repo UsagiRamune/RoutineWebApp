@@ -66,7 +66,9 @@ export default async function CalendarCard({ title }: Props) {
   console.log(`[CalendarCard] TOTAL: ${Date.now() - tStart}ms`)
 
   return (
-    <Link href="/calendar"
+    // prefetch={false} — กันการ์ดนี้ (โผล่ในจอแรกของ dashboard) ยิง prefetch /calendar อัตโนมัติตอน
+    // viewport visibility ทบกับการ์ดอื่นๆ ที่ prefetch พร้อมกันหมด
+    <Link href="/calendar" prefetch={false}
       className="block bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4
         hover:border-[#7C8394] transition-colors">
       <p className="text-sm font-medium mb-2">{title}</p>

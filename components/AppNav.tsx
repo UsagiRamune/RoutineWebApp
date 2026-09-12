@@ -28,7 +28,9 @@ export default function AppNav() {
           </Link>
         )}
         <div className="flex gap-2">
-          <Link href="/settings"
+          {/* prefetch={false} — settings เป็นหน้า data-heavy ที่ไม่ค่อยถูกกด ไม่ต้อง prefetch ทุกครั้งที่
+              โผล่ในจอ (ต่างจากลิงก์ "/" หน้าแรกด้านบนที่ปล่อย default prefetch ไว้ เพราะเป็นหน้าที่กลับไปบ่อยสุด) */}
+          <Link href="/settings" prefetch={false}
             className="p-2 rounded-lg border border-[#2A2F3D] text-[#7C8394]">
             <Settings size={16} />
           </Link>

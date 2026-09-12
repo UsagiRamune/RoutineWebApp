@@ -370,3 +370,58 @@ export interface GoogleCalendarChannel {
   expiration: string
   created_at: string
 }
+
+// ---------- workout player ----------
+
+export type WorkoutDayKind = 'heavy' | 'light' | 'rest'
+
+export interface WorkoutDay {
+  id: string
+  day_of_week: number
+  label: string
+  kind: WorkoutDayKind
+  rounds: number
+  exercise_rest_seconds: number
+  round_rest_seconds: number
+}
+
+export type WorkoutBlock = 'warmup' | 'main' | 'cooldown'
+export type WorkoutCategory = 'strength' | 'cardio' | 'core' | 'stretch'
+
+export interface WorkoutExercise {
+  id: string
+  day_id: string
+  block: WorkoutBlock
+  sort_order: number
+  name: string
+  category: WorkoutCategory | null
+  instructions: string
+  reps_label: string | null
+  duration_seconds: number | null
+  per_side: boolean
+}
+
+export interface WorkoutDayWithExercises extends WorkoutDay {
+  workout_exercises: WorkoutExercise[]
+}
+
+// อ้างอิงท่า+รอบที่ทำ/ข้าม เก็บใน workout_sessions.exercises_done/exercises_skipped (jsonb array)
+export interface WorkoutExerciseRef {
+  exercise_id: string
+  round: number
+}
+
+export interface WorkoutSession {
+  id: string
+  date: string
+  day_id: string | null
+  started_at: string
+  completed_at: string | null
+  exercises_done: WorkoutExerciseRef[]
+  exercises_skipped: WorkoutExerciseRef[]
+  active_minutes: number | null
+}
+
+export interface WorkoutSessionWithDay extends WorkoutSession {
+  workout_days: { label: string; kind: WorkoutDayKind } | null
+}
