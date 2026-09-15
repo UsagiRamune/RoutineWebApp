@@ -11,6 +11,7 @@ import CalendarCard from '@/components/dashboard/CalendarCard'
 import ProjectsCard from '@/components/dashboard/ProjectsCard'
 import CardSkeleton from '@/components/dashboard/CardSkeleton'
 import Hero from '@/components/dashboard/Hero'
+import ProgressBar from '@/components/ui/ProgressBar'
 import Link from 'next/link'
 
 export default async function Dashboard() {
@@ -94,6 +95,8 @@ export default async function Dashboard() {
   const waterTargetMl = profile?.daily_water_ml ?? 4000
   const mlPerSip = profile?.ml_per_sip ?? 37
   const proteinGapVal = proteinTarget !== null ? proteinTarget - proteinEaten : null
+  const stepsGoal = profile?.daily_steps_goal ?? 6000
+  const caloriesBurnedGoal = profile?.daily_active_calories_goal ?? 700
 
   const appSettings = appSettingsRes.data
   const windowHours = appSettings?.water_window_hours ?? 13
@@ -107,6 +110,8 @@ export default async function Dashboard() {
   const healthRows = healthRes.data ?? []
   const todayHealthRow = healthRows.find(r => r.date === today)
   const stepsToday = todayHealthRow?.steps ?? null
+  const caloriesBurnedToday = todayHealthRow?.calories_burned ?? null
+  const bmrKcal = profile?.bmr_kcal ?? null
 
   const todayLabel = new Date().toLocaleDateString('th-TH', {
     weekday: 'long', day: 'numeric', month: 'long', timeZone: TZ,
@@ -135,7 +140,11 @@ export default async function Dashboard() {
           latestWeight={latestWeight}
           weightDelta7={weightDelta7}
           stepsToday={stepsToday}
+          stepsGoal={stepsGoal}
+          caloriesBurnedGoal={caloriesBurnedGoal}
           plan={plan}
+          bmrKcal={bmrKcal}
+          caloriesBurnedToday={caloriesBurnedToday}
         />
 
         <div className="max-w-5xl mx-auto px-4">
@@ -167,15 +176,19 @@ export default async function Dashboard() {
                 )
               }
               if (m.key === 'nutrition') {
-                const gapText = proteinGapVal !== null && proteinGapVal > 0
-                  ? `โปรตีนขาด ${Math.round(proteinGapVal)} ก.`
-                  : `น้ำ ${(waterMlToday / 1000).toFixed(1)}/${(waterTargetMl / 1000).toFixed(1)} ล.`
+                const showWater = !(proteinGapVal !== null && proteinGapVal > 0)
+                const gapText = showWater
+                  ? `น้ำ ${(waterMlToday / 1000).toFixed(1)}/${(waterTargetMl / 1000).toFixed(1)} ล.`
+                  : `โปรตีนขาด ${Math.round(proteinGapVal ?? 0)} ก.`
                 return (
                   <ModuleCard key={m.key} href="/nutrition" title={moduleLabel(m)}>
                     <p className="text-2xl font-semibold">
                       {Math.round(caloriesEaten)} <span className="text-sm font-normal text-[#7C8394]">kcal</span>
                     </p>
                     <p className="text-xs text-[#7C8394] mt-1">{gapText}</p>
+                    {showWater && (
+                      <ProgressBar value={waterMlToday} target={waterTargetMl} className="mt-1.5" />
+                    )}
                   </ModuleCard>
                 )
               }
@@ -229,7 +242,16 @@ export default async function Dashboard() {
                         : 'ยังไม่ชั่งวันนี้'}
                     </p>
                     {stepsToday != null && (
-                      <p className="text-xs text-[#7C8394] mt-1">{stepsToday} ก้าว</p>
+                      <>
+                        <p className="text-xs text-[#7C8394] mt-1">{stepsToday} ก้าว</p>
+                        <ProgressBar value={stepsToday} target={stepsGoal} className="mt-1" />
+                      </>
+                    )}
+                    {caloriesBurnedToday != null && (
+                      <>
+                        <p className="text-xs text-[#7C8394] mt-1.5">{caloriesBurnedToday} kcal เผา</p>
+                        <ProgressBar value={caloriesBurnedToday} target={caloriesBurnedGoal} className="mt-1" />
+                      </>
                     )}
                   </ModuleCard>
                 )

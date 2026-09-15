@@ -154,6 +154,10 @@ export default function WorkoutPlayer({
   const [sideStep, setSideStep] = useState<1 | 2>(1)
   const [secondsLeft, setSecondsLeft] = useState(() => initialSecondsFor(steps[initialStepIndex]))
   const [paused, setPaused] = useState(false)
+  // prep buffer 3 วิ ก่อนท่าแรกที่โชว์ตอน mount เสมอ (ไม่ว่า rep-based หรือจับเวลา) และก่อนท่าที่ต้อง
+  // จับเวลาทุกครั้งที่ไปถึง (ดู logic เต็มใน goToStep) — กันนับถอยหลังจริงเริ่มทันทีไม่มีเวลาตั้งท่า/อ่านคำแนะนำ
+  const [prepping, setPrepping] = useState(true)
+  const [prepSecondsLeft, setPrepSecondsLeft] = useState(3)
   const [doneList, setDoneList] = useState<WorkoutExerciseRef[]>(initialDone)
   const [skippedList, setSkippedList] = useState<WorkoutExerciseRef[]>(initialSkipped)
   const [phase, setPhase] = useState<'active' | 'summary'>(steps.length === 0 ? 'summary' : 'active')
@@ -200,10 +204,16 @@ export default function WorkoutPlayer({
       finishWorkout()
       return
     }
+    const next = steps[nextIndex]
     setStepIndex(nextIndex)
     setSideStep(1)
     setPaused(false)
-    setSecondsLeft(initialSecondsFor(steps[nextIndex]))
+    setSecondsLeft(initialSecondsFor(next))
+    // prep buffer เฉพาะก่อนท่าที่ต้องจับเวลา (rep-based ผู้ใช้คุมจังหวะเองผ่านปุ่มอยู่แล้ว ไม่ต้องมี buffer
+    // ตอนไปท่า rep-based ถัดไป) — ครอบทั้งเคส "จบ rest แล้วเจอท่าจับเวลา" และ "ท่าจับเวลาต่อท่าจับเวลา" ในตัว
+    const needsPrep = next.type === 'exercise' && next.exercise.duration_seconds != null
+    setPrepping(needsPrep)
+    setPrepSecondsLeft(3)
   }
 
   function completeExercise(s: ExerciseStep, outcome: 'done' | 'skip') {
@@ -233,9 +243,18 @@ export default function WorkoutPlayer({
     }
   }
 
-  // นาฬิกานับถอยหลัง — ใช้กับทั้งท่าจับเวลาและหน้าจอพัก เคลียร์/ตั้งใหม่ทุกครั้งที่ step/side/paused เปลี่ยน
+  // prep buffer — นับถอยหลัง 3 วิแยกจากนาฬิกาจริง จบแล้วค่อยปิด prepping ให้นาฬิกาจริงด้านล่างเริ่มทำงาน
   useEffect(() => {
-    if (phase !== 'active' || paused || !step) return
+    if (phase !== 'active' || !prepping) return
+    if (prepSecondsLeft <= 0) { setPrepping(false); return }
+    const t = setTimeout(() => setPrepSecondsLeft(s => s - 1), 1000)
+    return () => clearTimeout(t)
+  }, [phase, prepping, prepSecondsLeft])
+
+  // นาฬิกานับถอยหลังจริง — ใช้กับทั้งท่าจับเวลาและหน้าจอพัก เคลียร์/ตั้งใหม่ทุกครั้งที่ step/side/paused
+  // เปลี่ยน หยุดไว้ก่อนถ้ายังอยู่ใน prep buffer
+  useEffect(() => {
+    if (phase !== 'active' || paused || !step || prepping) return
     const isTimedExercise = step.type === 'exercise' && step.exercise.duration_seconds != null
     const isRest = step.type === 'rest'
     if (!isTimedExercise && !isRest) return
@@ -264,7 +283,7 @@ export default function WorkoutPlayer({
     }, 1000)
     return () => clearInterval(interval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, stepIndex, paused, sideStep])
+  }, [phase, stepIndex, paused, sideStep, prepping])
 
   // ---------- summary ----------
 
@@ -315,6 +334,27 @@ export default function WorkoutPlayer({
   }
 
   if (!step) return null
+
+  // ---------- active: prep buffer (ก่อนท่าที่ต้องจับเวลาเสมอ — เช็ค prepping ไว้ใน goToStep แล้ว
+  // ว่าจะ trigger เมื่อไหร่ ที่นี่แค่ render ตามค่านั้น) ----------
+
+  if (prepping && step.type === 'exercise') {
+    const progress = (step.globalIndex / step.totalExercise) * 100
+    return (
+      <div className="min-h-screen bg-[#14171F] text-[#EDEAE0] flex flex-col">
+        <Header progress={progress} onExit={handleExitClick} />
+        <div className="max-w-lg mx-auto w-full px-4 flex-1 flex flex-col items-center justify-center text-center">
+          <p className="text-sm text-[#7C8394] mb-2">เตรียมตัว...</p>
+          <h2 className="text-xl font-semibold mb-6">{step.exercise.name}</h2>
+          <CountdownRing totalSeconds={3} secondsLeft={prepSecondsLeft} color="#F0A345" />
+          <button onClick={() => setPrepping(false)}
+            className="mt-8 min-h-[48px] px-6 text-sm text-[#7C8394]">
+            เริ่มเลย
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   // ---------- active: rest screen ----------
 

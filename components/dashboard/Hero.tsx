@@ -15,6 +15,7 @@ import {
 import { TZ } from '@/lib/dates'
 import { GlassWater } from 'lucide-react'
 import WaterReminderBanner from '@/components/WaterReminderBanner'
+import ProgressBar from '@/components/ui/ProgressBar'
 
 interface Props {
   today: string
@@ -34,7 +35,11 @@ interface Props {
   latestWeight: number | null
   weightDelta7: number | null
   stepsToday: number | null
+  stepsGoal: number
+  caloriesBurnedGoal: number
   plan: NutritionPlan
+  bmrKcal: number | null
+  caloriesBurnedToday: number | null
 }
 
 function fmtHHMM(d: Date) {
@@ -51,7 +56,8 @@ export default function Hero({
   today, todayLabel, caloriesEaten, caloriesTarget, proteinEaten, proteinTarget,
   waterMlToday, waterTargetMl, mlPerSip, windowHours, frontloadRatio, assumedSleepHours,
   containers, ifSettings,
-  latestWeight, weightDelta7, stepsToday, plan,
+  latestWeight, weightDelta7, stepsToday, stepsGoal, caloriesBurnedGoal, plan,
+  bmrKcal, caloriesBurnedToday,
 }: Props) {
   const supabase = createClient()
 
@@ -151,6 +157,12 @@ export default function Hero({
   const overTarget = caloriesTarget !== null && caloriesEaten > caloriesTarget
   const proteinGap = proteinTarget !== null ? proteinTarget - proteinEaten : null
 
+  // TDEE เป็นข้อมูลเสริมเฉยๆ — ห้ามเอาไปยุ่งกับ progress bar/เป้าคุมอาหารด้านบนเด็ดขาด (คนละเรื่องกัน)
+  const tdeeText = bmrKcal == null ? null
+    : caloriesBurnedToday
+      ? `TDEE วันนี้ ≈ ${bmrKcal + caloriesBurnedToday} kcal (BMR ${bmrKcal} + กิจกรรม ${caloriesBurnedToday})`
+      : `BMR ${bmrKcal} kcal (ยังไม่มีข้อมูลกิจกรรมวันนี้)`
+
   return (
     <>
       {wakePrompt.show && (
@@ -171,10 +183,10 @@ export default function Hero({
         </div>
       )}
 
+      {/* การ์ดลอย fixed position — ไม่ได้อยู่ในโฟลว์ปกติ วางตรงนี้แค่เพื่อความสะดวก */}
       <WaterReminderBanner pacing={pacing} primaryContainer={primaryContainer}
         onLog={logWater} />
 
-      {/* ครอบ max-w เองตรงนี้ เพื่อให้ banner ด้านบนยังเต็มความกว้างจอจริงๆ */}
       <div className="max-w-5xl mx-auto px-4 pt-8">
         <div className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-5 mb-6">
           {/* row 1: วันที่ + สถานะ IF */}
@@ -202,6 +214,8 @@ export default function Hero({
                 ? `ขาดอีก ${caloriesGap} kcal`
                 : `เกิน ${Math.abs(caloriesGap ?? 0)} kcal`}
           </p>
+          {/* TDEE — ข้อมูลเสริมอย่างเดียว ไม่เกี่ยวกับ progress bar/เป้าคุมอาหารด้านบน */}
+          {tdeeText && <p className="text-[10px] text-[#7C8394] mt-0.5">{tdeeText}</p>}
 
           {caloriesTarget !== null && (
             <div className="h-2 bg-[#14171F] rounded-full overflow-hidden mt-2 mb-4">
@@ -212,11 +226,15 @@ export default function Hero({
           {caloriesTarget === null && <div className="mb-4" />}
 
           {/* protein */}
-          <p className="text-xs text-[#7C8394] mb-4">
+          <p className="text-xs text-[#7C8394] mb-1">
             โปรตีน {Math.round(proteinEaten)}
             {proteinTarget !== null && `/${proteinTarget}`} ก.
             {proteinGap !== null && proteinGap > 0 && ` ขาด ${proteinGap} ก.`}
           </p>
+          {proteinTarget !== null && (
+            <ProgressBar value={proteinEaten} target={proteinTarget} className="mb-4" />
+          )}
+          {proteinTarget === null && <div className="mb-4" />}
 
           {/* ปุ่มหลับ-ตื่น */}
           <div className="pt-3 border-t border-[#2A2F3D]">
@@ -255,8 +273,8 @@ export default function Hero({
             )}
           </div>
 
-          {/* row 3: สรุปย่อ น้ำหนัก/ก้าว/น้ำ */}
-          <div className="grid grid-cols-3 gap-2 pt-3 mt-3 border-t border-[#2A2F3D]">
+          {/* row 3: สรุปย่อ น้ำหนัก/ก้าว/แคลเผา/น้ำ */}
+          <div className="grid grid-cols-4 gap-2 pt-3 mt-3 border-t border-[#2A2F3D]">
             {/* prefetch={false} — ลิงก์นี้อยู่ในจอแรกของ dashboard เหมือนกัน กัน prefetch ยิงพร้อมการ์ดอื่น */}
             <Link href="/health" prefetch={false} className="text-center">
               <p className="text-sm font-semibold tabular-nums"
@@ -276,13 +294,20 @@ export default function Hero({
             </Link>
             <div className="text-center">
               <p className="text-sm font-semibold tabular-nums">{stepsToday ?? '—'}</p>
-              <p className="text-[10px] text-[#7C8394]">ก้าว</p>
+              <p className="text-[10px] text-[#7C8394] mb-1">ก้าว</p>
+              <ProgressBar value={stepsToday ?? 0} target={stepsGoal} />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-semibold tabular-nums">{caloriesBurnedToday ?? '—'}</p>
+              <p className="text-[10px] text-[#7C8394] mb-1">kcal เผา</p>
+              <ProgressBar value={caloriesBurnedToday ?? 0} target={caloriesBurnedGoal} />
             </div>
             <div className="text-center">
               <p className="text-sm font-semibold tabular-nums">
                 {(currentMl / 1000).toFixed(1)}/{(waterTargetMl / 1000).toFixed(1)}
               </p>
-              <p className="text-[10px] text-[#7C8394]">น้ำ (ล.)</p>
+              <p className="text-[10px] text-[#7C8394] mb-1">น้ำ (ล.)</p>
+              <ProgressBar value={currentMl} target={waterTargetMl} />
             </div>
           </div>
 

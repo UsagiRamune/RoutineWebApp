@@ -48,10 +48,11 @@ export default function CalendarPanel() {
     repeat: 'none', repeatUntil: '',
   })
   const [days, setDays] = useState(7)
-  const [viewMode, setViewMode] = useState<'agenda' | 'grid'>('agenda')
+  const [viewMode, setViewMode] = useState<'agenda' | 'grid'>('grid')
   // เดือนที่กำลังโชว์ในมุมมองตาราง — ตั้งต้นเดือนนี้เสมอ (ตัด time ทิ้ง ใช้แค่ปี/เดือนอ้างอิง)
   const [gridMonth, setGridMonth] = useState(() => startOfMonth(new Date()))
-  const [selectedGridDay, setSelectedGridDay] = useState<string | null>(null)
+  // ตั้งต้นวันนี้เสมอ (ไม่ต้องรอคลิก) — คลิกเซลล์วันอื่นแล้วอัปเดตต่อ
+  const [selectedGridDay, setSelectedGridDay] = useState<string | null>(() => gridDayKey(new Date()))
 
   // มุมมองตาราง fetch ข้อมูลกว้างสุดที่ API รองรับเสมอ (31 วันข้างหน้า) ไม่ผูกกับ toggle 7/30 วันของ
   // agenda — ปฏิทิน cache ฝั่ง server เก็บแค่หน้าต่างวันข้างหน้าเท่านั้น (ไม่มีข้อมูลย้อนหลัง) ดังนั้นเดือน
@@ -295,20 +296,36 @@ export default function CalendarPanel() {
                   const key = gridDayKey(d)
                   const inMonth = isSameMonth(d, gridMonth)
                   const dayItems = itemsByDay.get(key)
-                  const count = (dayItems?.events.length ?? 0) + (dayItems?.tasks.length ?? 0)
+                  const allLabels = [
+                    ...(dayItems?.events ?? []).map(e => e.allDay ? e.title
+                      : `${new Date(e.start).toLocaleTimeString('th-TH',
+                          { hour: '2-digit', minute: '2-digit', timeZone: TZ })} ${e.title}`),
+                    ...(dayItems?.tasks ?? []).map(t => t.title),
+                  ]
+                  const shown = allLabels.slice(0, 2)
+                  const overflow = allLabels.length - shown.length
                   const selected = selectedGridDay === key
                   return (
                     <button key={key} disabled={!inMonth}
-                      onClick={() => setSelectedGridDay(selected ? null : key)}
-                      className={`aspect-square rounded-lg flex flex-col items-center justify-center gap-0.5
-                        text-xs transition-colors
+                      onClick={() => setSelectedGridDay(key)}
+                      className={`rounded-lg flex flex-col items-start text-left gap-0.5 px-1 py-1
+                        min-h-[60px] text-xs transition-colors overflow-hidden
                         ${!inMonth ? 'text-[#2A2F3D] cursor-default'
                           : selected ? 'bg-[#4FC1E0] text-[#14171F] font-semibold' : 'text-[#EDEAE0] hover:bg-[#14171F]'}
                         ${isToday(d) && !selected ? 'ring-1 ring-inset ring-[#4FC1E0]' : ''}`}>
                       <span>{d.getDate()}</span>
-                      {count > 0 && (
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0
-                          ${selected ? 'bg-[#14171F]' : 'bg-[#4FC1E0]'}`} />
+                      {shown.map((label, i) => (
+                        <span key={i}
+                          className={`text-[9px] leading-tight truncate w-full font-normal
+                            ${selected ? 'text-[#14171F]' : 'text-[#7C8394]'}`}>
+                          {label}
+                        </span>
+                      ))}
+                      {overflow > 0 && (
+                        <span className={`text-[9px] leading-tight font-normal
+                          ${selected ? 'text-[#14171F]' : 'text-[#7C8394]'}`}>
+                          +{overflow} ...
+                        </span>
                       )}
                     </button>
                   )

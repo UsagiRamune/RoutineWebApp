@@ -40,6 +40,7 @@ export default async function HealthPage() {
         supplements={(supplementsRes.data ?? []) as Supplement[]}
         supplementLogs={(supplementLogsRes.data ?? []) as SupplementLog[]}
         plan={(profileRes.data as NutritionProfile | null)?.plan ?? 'normal'}
+        profile={profileRes.data as NutritionProfile | null}
       />
     </>
   )

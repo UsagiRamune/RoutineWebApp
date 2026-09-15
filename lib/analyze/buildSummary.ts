@@ -121,15 +121,31 @@ export async function buildAnalysisSummary(supabase: any, days: number, rollover
     cur.protein += f.protein_g ?? 0
     nutByDay.set(f.date, cur)
   }
+  const calBurnedByDay = new Map<string, number | null>(
+    (healthDaily.data ?? []).map((h: any) => [h.date, h.calories_burned]))
+
   if (nutByDay.size > 0) {
     lines.push('## โภชนาการต่อวัน (แคลอรี/โปรตีน)')
+    if (profile?.bmr_kcal != null) {
+      lines.push('หมายเหตุ: "TDEE ประมาณ" ต่อวัน (BMR + แคลจากกิจกรรมวันนั้น) เป็นข้อมูลอ้างอิงพลังงานที่ใช้จริง ' +
+        'เท่านั้น แยกขาดจากเป้าคุมอาหาร (diet target) โดยสิ้นเชิง ห้ามเอาสองตัวเลขนี้มารวม/หักลบกันเป็น ' +
+        '"เหลืออีกกี่ kcal" ตัวเดียว — ให้รายงานแยกกันเป็น 2 ข้อสังเกตเสมอ: (1) กินเทียบเป้าคุมอาหาร ' +
+        '(2) กินเทียบ TDEE ประมาณ')
+    }
     for (const [d, v] of [...nutByDay.entries()].sort()) {
       const calGap = profile?.daily_calories != null ? ` (เป้า ${profile.daily_calories}, ${
         v.cal <= profile.daily_calories ? `ขาด ${Math.round(profile.daily_calories - v.cal)}` : `เกิน ${Math.round(v.cal - profile.daily_calories)}`
       })` : ''
       const proteinGap = profile?.daily_protein_g != null
         ? ` (เป้า ${profile.daily_protein_g} ก.)` : ''
-      lines.push(`${d}: ${Math.round(v.cal)} kcal${calGap}, โปรตีน ${v.protein.toFixed(0)} ก.${proteinGap}`)
+      let line = `${d}: ${Math.round(v.cal)} kcal${calGap}, โปรตีน ${v.protein.toFixed(0)} ก.${proteinGap}`
+      if (profile?.bmr_kcal != null) {
+        const burned = calBurnedByDay.get(d)
+        const tdee = profile.bmr_kcal + (burned ?? 0)
+        line += `, TDEE ประมาณ ${tdee} kcal (BMR ${profile.bmr_kcal}${
+          burned ? ` + กิจกรรม ${burned}` : ' + ไม่มีข้อมูลกิจกรรมวันนั้น'})`
+      }
+      lines.push(line)
     }
   }
 

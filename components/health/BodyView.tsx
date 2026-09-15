@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
-  BodyMetric, HealthDaily, Supplement, SupplementLog, SupplementSlot, NutritionPlan,
+  BodyMetric, HealthDaily, Supplement, SupplementLog, SupplementSlot, NutritionPlan, NutritionProfile,
 } from '@/lib/supabase/types'
 import { todayKey, dateKeyOffset, TZ } from '@/lib/dates'
 import { weightAsOf, weightDeltaColor } from '@/lib/nutrition'
@@ -14,6 +14,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   BarChart, Bar,
 } from 'recharts'
+import ProgressBar from '@/components/ui/ProgressBar'
 
 interface Props {
   today: string
@@ -23,6 +24,7 @@ interface Props {
   supplements: Supplement[]
   supplementLogs: SupplementLog[]
   plan: NutritionPlan
+  profile: NutritionProfile | null
 }
 
 const inputCls = 'bg-[#14171F] border border-[#2A2F3D] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#7C8394] min-h-[40px]'
@@ -45,7 +47,7 @@ function bmiBand(bmi: number): string {
 }
 
 export default function BodyView({
-  today, metrics, health, latestHeight, supplements, supplementLogs, plan,
+  today, metrics, health, latestHeight, supplements, supplementLogs, plan, profile,
 }: Props) {
   const supabase = createClient()
   const router = useRouter()
@@ -54,6 +56,20 @@ export default function BodyView({
   const todayMetric = metrics.find(m => m.date === today)
   const todayHealth = health.find(h => h.date === today)
   const yesterdayHealth = health.find(h => h.date === yesterday)
+
+  const stepsGoal = profile?.daily_steps_goal ?? 6000
+  const caloriesBurnedGoal = profile?.daily_active_calories_goal ?? 700
+
+  // ---------- เป้าก้าว/แคลที่เผา — แก้ตรง ไม่ผ่าน flow AI คำนวณเป้าใหม่ ----------
+  const [goalForm, setGoalForm] = useState({
+    steps: String(stepsGoal), calories: String(caloriesBurnedGoal),
+  })
+
+  async function saveGoalField(field: 'daily_steps_goal' | 'daily_active_calories_goal', raw: string) {
+    const value = Math.max(0, parseInt(raw) || 0)
+    await supabase.from('nutrition_profile').update({ [field]: value }).eq('id', 1)
+    router.refresh()
+  }
 
   // ---------- ก) ชั่งวันนี้ ----------
 
@@ -140,13 +156,14 @@ export default function BodyView({
     flashHealthSaved()
   }
 
-  async function saveDaySteps(date: string, raw: string) {
+  // ใช้ทั้งช่อง "ก้าว" และ "kcal" ของแถวย้อนหลัง — เขียนแค่ field เดียวที่แก้ ไม่แตะ field อื่นของวันนั้น
+  async function saveDayHealthField(date: string, field: 'steps' | 'calories_burned', raw: string) {
     const value = raw.trim() === '' ? null : Math.max(0, parseInt(raw) || 0)
     const existing = health.find(h => h.date === date)
     await supabase.from('health_daily').upsert({
       date,
-      steps: value,
-      calories_burned: existing?.calories_burned ?? null,
+      steps: field === 'steps' ? value : existing?.steps ?? null,
+      calories_burned: field === 'calories_burned' ? value : existing?.calories_burned ?? null,
       resting_hr: existing?.resting_hr ?? null,
       sleep_minutes: existing?.sleep_minutes ?? null,
       source: 'manual',
@@ -334,6 +351,10 @@ export default function BodyView({
                     onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
                     className="w-full bg-[#14171F] border border-[#2A2F3D] rounded-lg px-3 py-2
                       text-lg font-semibold tabular-nums outline-none focus:border-[#4FC1E0] min-h-[44px]" />
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <ProgressBar value={localHealth.steps ?? 0} target={stepsGoal} className="flex-1" />
+                    <span className="text-[10px] text-[#7C8394] flex-shrink-0">/{stepsGoal}</span>
+                  </div>
                 </div>
                 <div>
                   <label className="text-[10px] text-[#7C8394] flex items-center gap-1 mb-1">
@@ -346,9 +367,40 @@ export default function BodyView({
                     onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
                     className="w-full bg-[#14171F] border border-[#2A2F3D] rounded-lg px-3 py-2
                       text-lg font-semibold tabular-nums outline-none focus:border-[#F0A345] min-h-[44px]" />
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <ProgressBar value={localHealth.calories_burned ?? 0} target={caloriesBurnedGoal} className="flex-1" />
+                    <span className="text-[10px] text-[#7C8394] flex-shrink-0">/{caloriesBurnedGoal}</span>
+                  </div>
                 </div>
               </div>
               <p className="text-[10px] text-[#7C8394] mt-1.5">ไม่รวมการเผาผลาญพื้นฐาน (BMR)</p>
+
+              <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-[#2A2F3D]">
+                <div>
+                  <label className="text-[10px] text-[#7C8394] block mb-1">เป้าก้าว/วัน</label>
+                  <input type="number" min="0" defaultValue={goalForm.steps}
+                    onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                    onBlur={e => {
+                      if (e.target.value !== goalForm.steps) {
+                        setGoalForm(f => ({ ...f, steps: e.target.value }))
+                        saveGoalField('daily_steps_goal', e.target.value)
+                      }
+                    }}
+                    className={`w-full ${inputCls}`} />
+                </div>
+                <div>
+                  <label className="text-[10px] text-[#7C8394] block mb-1">เป้าแคลเผา/วัน</label>
+                  <input type="number" min="0" defaultValue={goalForm.calories}
+                    onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                    onBlur={e => {
+                      if (e.target.value !== goalForm.calories) {
+                        setGoalForm(f => ({ ...f, calories: e.target.value }))
+                        saveGoalField('daily_active_calories_goal', e.target.value)
+                      }
+                    }}
+                    className={`w-full ${inputCls}`} />
+                </div>
+              </div>
 
               <button onClick={() => setShowMore(o => !o)}
                 className="text-xs text-[#7C8394] mt-3 underline">
@@ -382,7 +434,7 @@ export default function BodyView({
                   <span className="text-xs text-[#7C8394] flex-1">ลืมกรอกเมื่อวานหรือเปล่า?</span>
                   <input type="number" min="0" placeholder="ก้าวเมื่อวาน..."
                     onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                    onBlur={e => e.target.value && saveDaySteps(yesterday, e.target.value)}
+                    onBlur={e => e.target.value && saveDayHealthField(yesterday, 'steps', e.target.value)}
                     className="w-28 bg-[#1B1F2A] border border-[#2A2F3D] rounded-lg px-2 py-1.5
                       text-xs outline-none focus:border-[#7C8394] min-h-[36px]" />
                 </div>
@@ -425,11 +477,20 @@ export default function BodyView({
                         onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
                         onBlur={e => {
                           const same = (row?.steps ?? '') === (e.target.value === '' ? '' : parseInt(e.target.value))
-                          if (!same) saveDaySteps(d, e.target.value)
+                          if (!same) saveDayHealthField(d, 'steps', e.target.value)
                         }}
                         className="flex-1 min-w-0 bg-[#14171F] border border-[#2A2F3D] rounded-lg
                           px-2 py-1.5 text-xs tabular-nums outline-none focus:border-[#7C8394] min-h-[36px]" />
                       <span className="text-[10px] text-[#7C8394] flex-shrink-0">ก้าว</span>
+                      <input type="number" min="0" defaultValue={row?.calories_burned ?? ''} placeholder="—"
+                        onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                        onBlur={e => {
+                          const same = (row?.calories_burned ?? '') === (e.target.value === '' ? '' : parseInt(e.target.value))
+                          if (!same) saveDayHealthField(d, 'calories_burned', e.target.value)
+                        }}
+                        className="flex-1 min-w-0 bg-[#14171F] border border-[#2A2F3D] rounded-lg
+                          px-2 py-1.5 text-xs tabular-nums outline-none focus:border-[#7C8394] min-h-[36px]" />
+                      <span className="text-[10px] text-[#7C8394] flex-shrink-0">kcal</span>
                     </div>
                   )
                 })}

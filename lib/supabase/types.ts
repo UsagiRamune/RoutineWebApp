@@ -185,6 +185,9 @@ export interface NutritionProfile {
   ml_per_sip: number
   ai_rationale: string | null
   updated_at: string
+  bmr_kcal: number | null
+  daily_steps_goal: number
+  daily_active_calories_goal: number
 }
 
 // ---------- sleep/wake ----------

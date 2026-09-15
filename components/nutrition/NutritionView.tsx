@@ -14,6 +14,7 @@ import { remainingInContainer } from '@/lib/water'
 import { TZ } from '@/lib/dates'
 import { GlassWater, Plus, X, Trash2, Sparkles } from 'lucide-react'
 import Toggle from '@/components/ui/Toggle'
+import ProgressBar from '@/components/ui/ProgressBar'
 
 interface Props {
   today: string
@@ -284,7 +285,8 @@ export default function NutritionView({
               </p>
               <div className="flex gap-2 mt-2">
                 <span className="text-xs px-2 py-1 rounded-md bg-[#14171F] border border-[#2A2F3D]">
-                  โปรตีน {totals.protein.toFixed(0)} ก.
+                  โปรตีน {totals.protein.toFixed(0)}
+                  {profile?.daily_protein_g != null && `/${profile.daily_protein_g}`} ก.
                 </span>
                 <span className="text-xs px-2 py-1 rounded-md bg-[#14171F] border border-[#2A2F3D]">
                   คาร์บ {totals.carbs.toFixed(0)} ก.
@@ -293,6 +295,9 @@ export default function NutritionView({
                   ไขมัน {totals.fat.toFixed(0)} ก.
                 </span>
               </div>
+              {profile?.daily_protein_g != null && (
+                <ProgressBar value={totals.protein} target={profile.daily_protein_g} className="mt-2" />
+              )}
             </div>
 
             {/* เพิ่มอาหาร */}
@@ -477,6 +482,7 @@ export default function NutritionView({
                   )}
                 </span>
               </div>
+              <ProgressBar value={currentMl} target={targetMl} className="mb-2" />
               {remainingHint && (
                 <p className="text-[10px] text-[#7C8394] mb-2">{remainingHint}</p>
               )}

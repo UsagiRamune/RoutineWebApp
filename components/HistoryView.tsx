@@ -162,16 +162,6 @@ export default function HistoryView({
 
   // ---------- actions ----------
 
-  async function saveWeight(form: { weight: string; height: string; note: string }) {
-    await supabase.from('body_metrics').upsert({
-      date: today,
-      weight_kg: form.weight === '' ? null : parseFloat(form.weight),
-      height_cm: form.height === '' ? null : parseFloat(form.height),
-      note: form.note || null,
-    }, { onConflict: 'date' })
-    router.refresh()
-  }
-
   async function editEntryTime(e: TimeEntryWithRoutine,
     field: 'clock_in' | 'clock_out', hhmm: string) {
     if (!hhmm) return
@@ -219,9 +209,6 @@ export default function HistoryView({
   }
 
   // ---------- render ----------
-
-  const [wForm, setWForm] = useState({ weight: '', height: '', note: '' })
-  const latestMetric = metrics[metrics.length - 1]
 
   function fmtHHMM(iso: string) {
     return new Date(iso).toLocaleTimeString('th-TH',
@@ -338,37 +325,6 @@ export default function HistoryView({
           {aiState === 'error' && (
             <p className="mt-3 text-sm text-[#E4574A]">{aiText}</p>
           )}
-        </div>
-
-        {/* body metrics */}
-        <div className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4 mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-[#7C8394]">บันทึกร่างกาย (วันนี้)</p>
-            {latestMetric?.weight_kg != null && (
-              <p className="text-xs text-[#7C8394]">
-                ล่าสุด {latestMetric.weight_kg} กก.
-                ({new Date(latestMetric.date).toLocaleDateString('th-TH',
-                  { day: 'numeric', month: 'short', timeZone: TZ })})
-              </p>
-            )}
-          </div>
-          <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
-            <input type="number" step="0.1" placeholder="น้ำหนัก (กก.)"
-              value={wForm.weight}
-              onChange={e => setWForm(p => ({ ...p, weight: e.target.value }))}
-              className="min-w-0 bg-[#14171F] border border-[#2A2F3D] rounded-lg
-                px-3 py-1.5 text-sm outline-none focus:border-[#7C8394]"
-            />
-            <input type="number" step="0.5" placeholder="ส่วนสูง (ซม.)"
-              value={wForm.height}
-              onChange={e => setWForm(p => ({ ...p, height: e.target.value }))}
-              className="min-w-0 bg-[#14171F] border border-[#2A2F3D] rounded-lg
-                px-3 py-1.5 text-sm outline-none focus:border-[#7C8394]"
-            />
-            <button onClick={() => saveWeight(wForm)}
-              className="px-4 rounded-lg bg-[#EDEAE0] text-[#14171F]
-                text-sm font-semibold">บันทึก</button>
-          </div>
         </div>
 
         {/* day drill-down */}
