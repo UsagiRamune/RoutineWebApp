@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #14171F;
+  --foreground: #EDEAE0;
 }
 
 @theme inline {
@@ -12,15 +12,14 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* Geist Sans เป็น base font ของทั้งแอป (design.md: Typography) */
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* font-mono class ใช้กับตัวเลข/เวลาทุกที่ (design.md: Geist Mono — ตัวเลขและเวลาเท่านั้น) */
+.font-mono {
+  font-family: var(--font-geist-mono), monospace;
 }

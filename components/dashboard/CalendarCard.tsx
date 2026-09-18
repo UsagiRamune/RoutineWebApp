@@ -1,5 +1,6 @@
 // การ์ดปฏิทินบน dashboard — server component อ่านตรงจาก calendar_events_cache (Part 3) ไม่มี client
 // fetch แล้ว: เร็วกว่าเดิม (ไม่ต้องรอ round-trip ฝั่ง browser) และ stream ได้ผ่าน Suspense (Part 5)
+// ปรับ styling เป็น list-row style (design.md) — ไม่มีกรอบ card เต็ม ใช้ accent bar ซ้ายแทน
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { TZ } from '@/lib/dates'
@@ -65,26 +66,38 @@ export default async function CalendarCard({ title }: Props) {
   }
   console.log(`[CalendarCard] TOTAL: ${Date.now() - tStart}ms`)
 
+  // list-row style: accent bar ซ้าย (#4FC1E0 = ปฏิทิน/งาน), ไม่มีกรอบ card เต็ม
+  // prefetch={false} — กันการ์ดนี้ (โผล่ในจอแรกของ dashboard) ยิง prefetch /calendar อัตโนมัติตอน
+  // viewport visibility ทบกับการ์ดอื่นๆ ที่ prefetch พร้อมกันหมด
   return (
-    // prefetch={false} — กันการ์ดนี้ (โผล่ในจอแรกของ dashboard) ยิง prefetch /calendar อัตโนมัติตอน
-    // viewport visibility ทบกับการ์ดอื่นๆ ที่ prefetch พร้อมกันหมด
     <Link href="/calendar" prefetch={false}
-      className="block bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4
-        hover:border-[#7C8394] transition-colors">
-      <p className="text-sm font-medium mb-2">{title}</p>
-      {!connected && <p className="text-xs text-[#7C8394]">เชื่อม Google Calendar</p>}
-      {connected && errored && <p className="text-xs text-[#E4574A]">ดึงข้อมูลไม่สำเร็จ</p>}
-      {connected && !errored && (
-        upcoming.length === 0
-          ? <p className="text-xs text-[#7C8394]">ไม่มีนัดหมายเร็วๆ นี้</p>
-          : <div className="space-y-1">
-              {upcoming.map(e => (
-                <p key={e.id} className="text-xs text-[#7C8394] truncate">
-                  <span className="tabular-nums">{fmt(e)}</span> · {e.title}
-                </p>
-              ))}
-            </div>
-      )}
+      className="flex items-center gap-4 py-3.5 pl-0 pr-2
+        hover:bg-[#1B1F2A] rounded-r-lg transition-colors group border-y border-[#2A2F3D]">
+      {/* accent bar — ปฏิทิน/งาน = #4FC1E0 (design.md) */}
+      <div className="w-[3px] self-stretch rounded-r-full flex-shrink-0 bg-[#4FC1E0]" />
+
+      <div className="flex-1 min-w-0">
+        <p className="text-[11px] text-[#7C8394] tracking-[0.05em] uppercase mb-0.5">{title}</p>
+        {!connected && <p className="text-sm text-[#7C8394]">เชื่อม Google Calendar</p>}
+        {connected && errored && <p className="text-sm text-[#E4574A]">ดึงข้อมูลไม่สำเร็จ</p>}
+        {connected && !errored && (
+          upcoming.length === 0
+            ? <p className="text-sm text-[#7C8394]">ไม่มีนัดหมายเร็วๆ นี้</p>
+            : <div className="space-y-0.5">
+                {upcoming.map(e => (
+                  <p key={e.id} className="text-sm text-[#EDEAE0] truncate">
+                    <span className="font-mono text-xs text-[#7C8394]">{fmt(e)}</span>
+                    {' · '}{e.title}
+                  </p>
+                ))}
+              </div>
+        )}
+      </div>
+
+      <svg className="w-4 h-4 text-[#2A2F3D] group-hover:text-[#7C8394] transition-colors flex-shrink-0"
+        fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+      </svg>
     </Link>
   )
 }

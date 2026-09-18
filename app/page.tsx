@@ -1,4 +1,4 @@
-import { Suspense } from 'react'
+import React from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { Module, WaterContainer } from '@/lib/supabase/types'
 import { todayKey, dateKeyOffset, getRolloverHour, bangkokNow, TZ } from '@/lib/dates'
@@ -7,11 +7,10 @@ import { moduleLabel } from '@/lib/moduleLabels'
 import AppNav from '@/components/AppNav'
 import RealtimeRefresher from '@/components/RealtimeRefresher'
 import ModuleCard from '@/components/dashboard/ModuleCard'
-import CalendarCard from '@/components/dashboard/CalendarCard'
-import ProjectsCard from '@/components/dashboard/ProjectsCard'
-import CardSkeleton from '@/components/dashboard/CardSkeleton'
+import BentoCalendarCard from '@/components/dashboard/BentoCalendarCard'
+import BentoProjectsCard from '@/components/dashboard/BentoProjectsCard'
 import Hero from '@/components/dashboard/Hero'
-import ProgressBar from '@/components/ui/ProgressBar'
+
 import Link from 'next/link'
 
 export default async function Dashboard() {
@@ -147,124 +146,208 @@ export default async function Dashboard() {
           caloriesBurnedToday={caloriesBurnedToday}
         />
 
+        {/* ───── Bento Grid — module section ───── */}
+        {/* layout pass: สร้าง Bento composition ตาม design.md hierarchy (calendar ใหญ่สุด, routine เล็กสุด) */}
+        {/* desktop: 4-col grid / tablet: 2-col / mobile: 1-col — ดูรายละเอียดแต่ละ breakpoint ด้านล่าง */}
         <div className="max-w-5xl mx-auto px-4">
-          <h1 className="text-xl font-semibold mb-6">แดชบอร์ด</h1>
+          <p className="text-[11px] text-[#7C8394] tracking-[0.05em] uppercase mb-3">โมดูล</p>
 
           {modules.length === 0 && (
-            <p className="text-sm text-[#7C8394]">
+            <p className="text-sm text-[#7C8394] py-4">
               ยังไม่มีโมดูลเปิดใช้งาน — ไปเปิดที่ <Link href="/settings" className="underline">ตั้งค่า</Link>
             </p>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {modules.map(m => {
-              if (m.key === 'routine') {
-                return (
-                  <ModuleCard key={m.key} href="/routine" title={moduleLabel(m)}>
-                    <p className="text-2xl font-semibold">{checklistDone}/{checklistTotal}</p>
-                    <p className="text-xs text-[#7C8394] mt-1">
-                      เช็คลิสต์วันนี้ · จับเวลารวม {(trackedMins / 60).toFixed(1)} ชม.
-                    </p>
-                  </ModuleCard>
-                )
-              }
-              if (m.key === 'calendar') {
-                return (
-                  <Suspense key={m.key} fallback={<CardSkeleton />}>
-                    <CalendarCard title={moduleLabel(m)} />
-                  </Suspense>
-                )
-              }
-              if (m.key === 'nutrition') {
-                const showWater = !(proteinGapVal !== null && proteinGapVal > 0)
-                const gapText = showWater
-                  ? `น้ำ ${(waterMlToday / 1000).toFixed(1)}/${(waterTargetMl / 1000).toFixed(1)} ล.`
-                  : `โปรตีนขาด ${Math.round(proteinGapVal ?? 0)} ก.`
-                return (
-                  <ModuleCard key={m.key} href="/nutrition" title={moduleLabel(m)}>
-                    <p className="text-2xl font-semibold">
-                      {Math.round(caloriesEaten)} <span className="text-sm font-normal text-[#7C8394]">kcal</span>
-                    </p>
-                    <p className="text-xs text-[#7C8394] mt-1">{gapText}</p>
-                    {showWater && (
-                      <ProgressBar value={waterMlToday} target={waterTargetMl} className="mt-1.5" />
-                    )}
-                  </ModuleCard>
-                )
-              }
-              if (m.key === 'history') {
-                return (
-                  <ModuleCard key={m.key} href="/history" title={moduleLabel(m)}>
-                    <p className="text-2xl font-semibold">
-                      {(weekMins / 60).toFixed(1)} <span className="text-sm font-normal text-[#7C8394]">ชม.</span>
-                    </p>
-                    <p className="text-xs text-[#7C8394] mt-1">รวมชั่วโมงจับเวลาสัปดาห์นี้</p>
-                  </ModuleCard>
-                )
-              }
-              if (m.key === 'projects') {
-                return (
-                  <Suspense key={m.key} fallback={<CardSkeleton />}>
-                    <ProjectsCard title={moduleLabel(m)} weekStart={weekStart} />
-                  </Suspense>
-                )
-              }
-              if (m.key === 'workout') {
-                const wDay = workoutDayRes.data
-                const wSession = workoutSessionRes.data
-                // วันพักไม่โชว์สถานะ session เลย ต่อให้บังเอิญมีแถวค้างอยู่ (ไม่ควรเกิด แต่กันไว้)
-                const isRest = !wDay || wDay.kind === 'rest'
-                return (
-                  <ModuleCard key={m.key} href="/workout" title={moduleLabel(m)}>
-                    <p className="text-sm font-medium truncate">{wDay?.label ?? '—'}</p>
-                    {isRest ? (
-                      <p className="text-xs text-[#7C8394] mt-1">วันพัก</p>
-                    ) : wSession?.completed_at ? (
-                      <p className="text-sm text-[#4FC1E0] mt-1">
-                        เล่นแล้ว {wSession.active_minutes ?? '?'} นาที ✓
-                      </p>
-                    ) : wSession ? (
-                      <p className="text-sm text-[#F0A345] mt-1">เล่นค้างไว้ — เล่นต่อ</p>
-                    ) : (
-                      <p className="text-xs text-[#7C8394] mt-1">ยังไม่ได้เล่น</p>
-                    )}
-                  </ModuleCard>
-                )
-              }
-              if (m.key === 'health') {
-                // เช็คว่าชั่งวันนี้จริงไหม (ไม่ใช่แค่มีน้ำหนักล่าสุดจากวันก่อนๆ)
-                const weighedToday = (weightWindowRes.data ?? []).some(w => w.date === today && w.weight_kg != null)
-                return (
-                  <ModuleCard key={m.key} href="/health" title={moduleLabel(m)}>
-                    <p className="text-lg font-semibold">
-                      {weighedToday && latestWeight != null
-                        ? `ชั่งแล้ว ${latestWeight.toFixed(1)} กก.`
-                        : 'ยังไม่ชั่งวันนี้'}
-                    </p>
-                    {stepsToday != null && (
-                      <>
-                        <p className="text-xs text-[#7C8394] mt-1">{stepsToday} ก้าว</p>
-                        <ProgressBar value={stepsToday} target={stepsGoal} className="mt-1" />
-                      </>
-                    )}
-                    {caloriesBurnedToday != null && (
-                      <>
-                        <p className="text-xs text-[#7C8394] mt-1.5">{caloriesBurnedToday} kcal เผา</p>
-                        <ProgressBar value={caloriesBurnedToday} target={caloriesBurnedGoal} className="mt-1" />
-                      </>
-                    )}
-                  </ModuleCard>
-                )
-              }
-              return (
-                <div key={m.key}
-                  className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4 opacity-50">
-                  <p className="text-sm font-medium mb-2">{moduleLabel(m)}</p>
-                  <p className="text-xs text-[#7C8394]">เร็วๆ นี้</p>
+          {modules.length > 0 && (() => {
+            // ดึง module แต่ละตัวออกมาก่อน (preserve ordering semantics จาก DB)
+            // ถ้าโมดูลไม่ได้เปิดใน settings จะไม่ปรากฏใน modules array เลย (filtered ก่อนมาถึงนี้)
+            const getModule = (key: string) => modules.find(m => m.key === key)
+
+            const calMod    = getModule('calendar')
+            const nutritMod = getModule('nutrition')
+            const healthMod = getModule('health')
+            const projMod   = getModule('projects')
+            const workMod   = getModule('workout')
+            const histMod   = getModule('history')
+            const routMod   = getModule('routine')
+
+            const wDay = workoutDayRes.data
+            const wSession = workoutSessionRes.data
+            const isRest = !wDay || wDay.kind === 'rest'
+            const weighedToday = (weightWindowRes.data ?? []).some(w => w.date === today && w.weight_kg != null)
+            const showWater = !(proteinGapVal !== null && proteinGapVal > 0)
+            const nutritSecondary = showWater
+              ? `น้ำ ${(waterMlToday / 1000).toFixed(1)}/${(waterTargetMl / 1000).toFixed(1)} ล.`
+              : `โปรตีนขาด ${Math.round(proteinGapVal ?? 0)} ก.`
+
+            // โมดูลที่ไม่มีใน KNOWN_KEYS → fallback tile (opacity ลด บอกว่ายังไม่รองรับ)
+            const KNOWN_KEYS = new Set(['calendar','nutrition','health','projects','workout','history','routine'])
+            const unknownModules = modules.filter(m => !KNOWN_KEYS.has(m.key))
+
+            return (
+              <>
+                {/*
+                  ┌─────────────────────────────────┬──────────────────────┐  desktop 4-col
+                  │                                 │    NUTRITION (1×1)   │
+                  │       CALENDAR (2×2)            ├──────────────────────┤
+                  │                                 │    HEALTH (1×1)      │
+                  ├──────────────────┬──────────────┴──────────────────────┤
+                  │   PROJECTS (2×1) │         WORKOUT (2×1)               │
+                  ├──────────────────┼─────────────────────────────────────┤
+                  │   HISTORY (2×1)  │         ROUTINE (2×1)               │
+                  └──────────────────┴─────────────────────────────────────┘
+
+                  tablet 2-col: Calendar top full-width, ที่เหลือ 2-col ตาม priority
+                  mobile: 1-col stack ทั้งหมด calendar อยู่บนสุด
+                */}
+
+                {/* Row 1+2: Calendar (anchor) + Nutrition + Health */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+
+                  {/* CALENDAR — largest tile: col-span-2 row-span-2 on lg, full-width on sm, normal on mobile */}
+                  {calMod && (
+                    <BentoCalendarCard
+                      title={moduleLabel(calMod)}
+                      className="sm:col-span-2 lg:col-span-2 lg:row-span-2 min-h-[180px]"
+                    />
+                  )}
+
+                  {/* NUTRITION — medium tile: right column top on lg */}
+                  {nutritMod && (
+                    <ModuleCard
+                      href="/nutrition"
+                      title={moduleLabel(nutritMod)}
+                      moduleKey="nutrition"
+                      className="lg:col-span-2"
+                    >
+                      <div className="flex items-baseline gap-2 mt-1">
+                        <span className="font-mono text-2xl font-semibold">
+                          {Math.round(caloriesEaten)}
+                        </span>
+                        <span className="text-xs text-[#7C8394]">kcal</span>
+                      </div>
+                      <p className="text-xs text-[#7C8394] mt-1">{nutritSecondary}</p>
+                    </ModuleCard>
+                  )}
+
+                  {/* HEALTH — medium tile: right column bottom on lg */}
+                  {healthMod && (
+                    <ModuleCard
+                      href="/health"
+                      title={moduleLabel(healthMod)}
+                      moduleKey="health"
+                      className="lg:col-span-2"
+                    >
+                      <div className="flex items-center gap-3 mt-1 flex-wrap">
+                        <div>
+                          <span className="font-mono text-2xl font-semibold">
+                            {weighedToday && latestWeight != null ? latestWeight.toFixed(1) : '—'}
+                          </span>
+                          <span className="text-xs text-[#7C8394] ml-1">กก.</span>
+                        </div>
+                        {stepsToday != null && (
+                          <div className="border-l border-[#2A2F3D] pl-3">
+                            <span className="font-mono text-lg font-semibold">
+                              {stepsToday.toLocaleString()}
+                            </span>
+                            <span className="text-xs text-[#7C8394] ml-1">ก้าว</span>
+                          </div>
+                        )}
+                      </div>
+                      {!weighedToday && (
+                        <p className="text-xs text-[#7C8394] mt-1">ยังไม่ชั่งวันนี้</p>
+                      )}
+                    </ModuleCard>
+                  )}
                 </div>
-              )
-            })}
-          </div>
+
+                {/* Row 3: Projects (wide) + Workout */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                  {projMod && (
+                    <BentoProjectsCard
+                      title={moduleLabel(projMod)}
+                      weekStart={weekStart}
+                    />
+                  )}
+
+                  {workMod && (
+                    <ModuleCard
+                      href="/workout"
+                      title={moduleLabel(workMod)}
+                      moduleKey="workout"
+                    >
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span className="text-sm font-medium">{wDay?.label ?? '—'}</span>
+                        {isRest ? (
+                          <span className="text-xs text-[#7C8394]">วันพัก</span>
+                        ) : wSession?.completed_at ? (
+                          <span className="text-xs text-[#4FC1E0]">
+                            เล่นแล้ว <span className="font-mono">{wSession.active_minutes ?? '?'}</span> นาที ✓
+                          </span>
+                        ) : wSession ? (
+                          <span className="text-xs text-[#F0A345]">เล่นค้างไว้</span>
+                        ) : (
+                          <span className="text-xs text-[#7C8394]">ยังไม่ได้เล่น</span>
+                        )}
+                      </div>
+                    </ModuleCard>
+                  )}
+                </div>
+
+                {/* Row 4: History + Routine (lower priority — smaller visual weight) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                  {histMod && (
+                    <ModuleCard
+                      href="/history"
+                      title={moduleLabel(histMod)}
+                      moduleKey="history"
+                    >
+                      <div className="flex items-baseline gap-2 mt-1">
+                        <span className="font-mono text-xl font-semibold">
+                          {(weekMins / 60).toFixed(1)}
+                        </span>
+                        <span className="text-xs text-[#7C8394]">ชม. สัปดาห์นี้</span>
+                      </div>
+                    </ModuleCard>
+                  )}
+
+                  {/* ROUTINE — intentionally lower priority: same tile size as History, no SegmentedBar here */}
+                  {routMod && (
+                    <ModuleCard
+                      href="/routine"
+                      title={moduleLabel(routMod)}
+                      moduleKey="routine"
+                    >
+                      <div className="flex items-baseline gap-2 mt-1">
+                        <span className="font-mono text-xl font-semibold">
+                          {checklistDone}/{checklistTotal}
+                        </span>
+                        <span className="text-xs text-[#7C8394]">เช็คลิสต์</span>
+                        {trackedMins > 0 && (
+                          <span className="text-xs text-[#7C8394]">
+                            · <span className="font-mono">{(trackedMins / 60).toFixed(1)}</span> ชม.
+                          </span>
+                        )}
+                      </div>
+                    </ModuleCard>
+                  )}
+                </div>
+
+                {/* Fallback: โมดูลที่ไม่รู้จัก — แสดงแบบ dimmed ไม่โยน error */}
+                {unknownModules.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {unknownModules.map(m => (
+                      <div key={m.key}
+                        className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4 opacity-40">
+                        <p className="text-[11px] text-[#7C8394] tracking-[0.05em] uppercase">{moduleLabel(m)}</p>
+                        <p className="text-xs text-[#7C8394] mt-1">เร็วๆ นี้</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )
+          })()}
         </div>
       </main>
     </>

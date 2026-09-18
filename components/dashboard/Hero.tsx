@@ -1,7 +1,7 @@
 'use client'
 
-// hero การ์ดบนสุดของ dashboard: แคลอรี/โปรตีนวันนี้เทียบเป้า + สถานะ IF + ปุ่มหลับ-ตื่น
-// + แบนเนอร์เตือนดื่มน้ำ (pacing ตาม hoursAwake) + แถวสรุปย่อ น้ำหนัก/ก้าว/น้ำ
+// hero section ของ dashboard — ไม่มี card wrapper (design.md: hero content ไม่ต้องมีกรอบ)
+// ตัวเลขหลัก (แคล/น้ำหนัก/ก้าว/timestamp) ใช้ Geist Mono ทั้งหมด ผ่าน font-mono class
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -15,7 +15,7 @@ import {
 import { TZ } from '@/lib/dates'
 import { GlassWater } from 'lucide-react'
 import WaterReminderBanner from '@/components/WaterReminderBanner'
-import ProgressBar from '@/components/ui/ProgressBar'
+import SegmentedBar from '@/components/ui/SegmentedBar'
 
 interface Props {
   today: string
@@ -153,7 +153,6 @@ export default function Hero({
 
   // ---------- แคลอรี่/โปรตีน ----------
   const caloriesGap = caloriesTarget !== null ? caloriesTarget - caloriesEaten : null
-  const caloriesPct = caloriesTarget ? Math.min(100, (caloriesEaten / caloriesTarget) * 100) : 0
   const overTarget = caloriesTarget !== null && caloriesEaten > caloriesTarget
   const proteinGap = proteinTarget !== null ? proteinTarget - proteinEaten : null
 
@@ -187,137 +186,185 @@ export default function Hero({
       <WaterReminderBanner pacing={pacing} primaryContainer={primaryContainer}
         onLog={logWater} />
 
-      <div className="max-w-5xl mx-auto px-4 pt-8">
-        <div className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-5 mb-6">
-          {/* row 1: วันที่ + สถานะ IF */}
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-[#7C8394]">{todayLabel}</p>
-            {ifChip && (
-              <span className="text-xs px-2.5 py-1 rounded-full bg-[#14171F] border border-[#2A2F3D]
-                text-[#4FC1E0] font-medium">
-                {ifChip}
-              </span>
-            )}
-          </div>
+      {/* ───── Hero Section — ไม่มีกรอบ card (design.md: hero content) ───── */}
+      <div className="max-w-5xl mx-auto px-4 pt-10 pb-2">
 
-          {/* row 2: แคลอรี่ */}
-          <p className="text-4xl font-semibold tabular-nums">
-            {Math.round(caloriesEaten)}
-            {caloriesTarget !== null && (
-              <span className="text-lg text-[#7C8394] font-normal"> / {caloriesTarget} kcal</span>
-            )}
-          </p>
-          <p className={`text-xs mt-1 ${overTarget ? 'text-[#F0A345]' : 'text-[#7C8394]'}`}>
+        {/* วันที่ + IF chip */}
+        <div className="flex items-center justify-between mb-6">
+          <p className="text-sm text-[#7C8394]">{todayLabel}</p>
+          {ifChip && (
+            <span className="text-xs px-2.5 py-1 rounded-full bg-[#1B1F2A] border border-[#2A2F3D]
+              text-[#4FC1E0] font-medium font-mono">
+              {ifChip}
+            </span>
+          )}
+        </div>
+
+        {/* ─── แคลอรี่ hero — ตัวเลขใหญ่สุดในหน้า ─── */}
+        {/* design.md: ค่าจริงต้องใหญ่/หนักกว่าเป้า, ห้ามโชว์ % หรือ remaining แบบเด่น */}
+        <div className="mb-1">
+          <p className="text-[11px] text-[#7C8394] tracking-[0.05em] uppercase mb-2">แคลอรี่วันนี้</p>
+          <div className="flex items-baseline gap-3">
+            <span className="font-mono text-7xl font-semibold leading-none tracking-tight">
+              {Math.round(caloriesEaten)}
+            </span>
+            <span className="text-sm text-[#7C8394]">kcal</span>
+          </div>
+          {/* เป้า + ขาด/เกิน — เล็กจาง ไม่ใช่ประเด็นหลัก (design.md) */}
+          <p className={`text-xs mt-2 font-mono ${overTarget ? 'text-[#E4574A]' : 'text-[#7C8394]'}`}>
             {caloriesTarget === null
               ? 'ยังไม่ตั้งเป้า — ไปตั้งที่หน้าโภชนาการ'
               : caloriesGap !== null && caloriesGap >= 0
-                ? `ขาดอีก ${caloriesGap} kcal`
-                : `เกิน ${Math.abs(caloriesGap ?? 0)} kcal`}
+                ? `เป้า ${caloriesTarget} kcal · ขาดอีก ${caloriesGap}`
+                : `เป้า ${caloriesTarget} kcal · เกิน ${Math.abs(caloriesGap ?? 0)}`}
           </p>
-          {/* TDEE — ข้อมูลเสริมอย่างเดียว ไม่เกี่ยวกับ progress bar/เป้าคุมอาหารด้านบน */}
           {tdeeText && <p className="text-[10px] text-[#7C8394] mt-0.5">{tdeeText}</p>}
+        </div>
 
-          {caloriesTarget !== null && (
-            <div className="h-2 bg-[#14171F] rounded-full overflow-hidden mt-2 mb-4">
-              <div className="h-full rounded-full transition-all"
-                style={{ width: `${caloriesPct}%`, background: overTarget ? '#F0A345' : '#4FC1E0' }} />
-            </div>
-          )}
-          {caloriesTarget === null && <div className="mb-4" />}
+        {/* Segmented bar แคลอรี่ */}
+        {caloriesTarget !== null && (
+          <SegmentedBar
+            value={caloriesEaten}
+            target={caloriesTarget}
+            color={overTarget ? '#E4574A' : '#4FC1E0'}
+            className="mt-3 mb-5"
+          />
+        )}
+        {caloriesTarget === null && <div className="mb-5" />}
 
-          {/* protein */}
-          <p className="text-xs text-[#7C8394] mb-1">
-            โปรตีน {Math.round(proteinEaten)}
-            {proteinTarget !== null && `/${proteinTarget}`} ก.
-            {proteinGap !== null && proteinGap > 0 && ` ขาด ${proteinGap} ก.`}
+        {/* โปรตีน — secondary metric */}
+        <div className="mb-1">
+          <p className="text-xs text-[#7C8394]">
+            โปรตีน{' '}
+            <span className="font-mono">{Math.round(proteinEaten)}</span>
+            {proteinTarget !== null && (
+              <span className="font-mono"> / {proteinTarget}</span>
+            )}{' '}ก.
+            {proteinGap !== null && proteinGap > 0 && (
+              <span className="font-mono"> · ขาด {proteinGap} ก.</span>
+            )}
           </p>
           {proteinTarget !== null && (
-            <ProgressBar value={proteinEaten} target={proteinTarget} className="mb-4" />
+            <SegmentedBar value={proteinEaten} target={proteinTarget} className="mt-1.5 mb-5" />
           )}
-          {proteinTarget === null && <div className="mb-4" />}
+          {proteinTarget === null && <div className="mb-5" />}
+        </div>
 
-          {/* ปุ่มหลับ-ตื่น */}
-          <div className="pt-3 border-t border-[#2A2F3D]">
-            <div className="flex items-center gap-2">
-              <button onClick={handleSleepToggle} disabled={!sleepState || sleepBusy}
-                className="flex-1 py-2.5 rounded-lg bg-[#14171F] border border-[#2A2F3D]
-                  text-sm font-semibold disabled:opacity-50 min-h-[40px]">
-                {asleep ? '☀️ ตื่นแล้ว' : '😴 เข้านอน'}
-              </button>
-              <button onClick={openEditTime} disabled={!sleepState}
-                className="text-xs text-[#7C8394] px-2 disabled:opacity-50">
-                แก้เวลา
-              </button>
-            </div>
-
-            {asleep && (
-              <p className="text-xs text-[#7C8394] mt-2">
-                หลับมา {hoursAsleep.toFixed(1)} ชม.
-                {wakeEstimate && ` · น่าจะตื่นราว ${fmtHHMM(wakeEstimate)}`}
-              </p>
-            )}
-
-            {editingTime && (
-              <div className="flex items-center gap-2 mt-2">
-                <input type="datetime-local" value={timeInput}
-                  onChange={e => setTimeInput(e.target.value)}
-                  className="flex-1 min-w-0 bg-[#14171F] border border-[#2A2F3D] rounded-lg
-                    px-2 py-1.5 text-xs outline-none focus:border-[#7C8394]" />
-                <button onClick={saveEditTime}
-                  className="px-3 py-1.5 rounded-lg bg-[#EDEAE0] text-[#14171F] text-xs font-semibold">
-                  บันทึก
-                </button>
-                <button onClick={() => setEditingTime(false)}
-                  className="text-xs text-[#7C8394]">ยกเลิก</button>
-              </div>
-            )}
-          </div>
-
-          {/* row 3: สรุปย่อ น้ำหนัก/ก้าว/แคลเผา/น้ำ */}
-          <div className="grid grid-cols-4 gap-2 pt-3 mt-3 border-t border-[#2A2F3D]">
-            {/* prefetch={false} — ลิงก์นี้อยู่ในจอแรกของ dashboard เหมือนกัน กัน prefetch ยิงพร้อมการ์ดอื่น */}
-            <Link href="/health" prefetch={false} className="text-center">
-              <p className="text-sm font-semibold tabular-nums"
-                style={{ color: weightDeltaColor(weightDelta7, plan) }}>
-                {latestWeight != null ? latestWeight.toFixed(1) : '—'}
-              </p>
-              <p className="text-[10px] text-[#7C8394]">
-                {latestWeight == null ? 'ยังไม่ได้ชั่ง' : (
-                  <>
-                    กก.
-                    {weightDelta7 != null && weightDelta7 !== 0 && (
-                      ` ${weightDelta7 > 0 ? '↑' : '↓'}${Math.abs(weightDelta7).toFixed(1)}`
-                    )}
-                  </>
-                )}
-              </p>
-            </Link>
-            <div className="text-center">
-              <p className="text-sm font-semibold tabular-nums">{stepsToday ?? '—'}</p>
-              <p className="text-[10px] text-[#7C8394] mb-1">ก้าว</p>
-              <ProgressBar value={stepsToday ?? 0} target={stepsGoal} />
-            </div>
-            <div className="text-center">
-              <p className="text-sm font-semibold tabular-nums">{caloriesBurnedToday ?? '—'}</p>
-              <p className="text-[10px] text-[#7C8394] mb-1">kcal เผา</p>
-              <ProgressBar value={caloriesBurnedToday ?? 0} target={caloriesBurnedGoal} />
-            </div>
-            <div className="text-center">
-              <p className="text-sm font-semibold tabular-nums">
-                {(currentMl / 1000).toFixed(1)}/{(waterTargetMl / 1000).toFixed(1)}
-              </p>
-              <p className="text-[10px] text-[#7C8394] mb-1">น้ำ (ล.)</p>
-              <ProgressBar value={currentMl} target={waterTargetMl} />
-            </div>
-          </div>
-
-          <button onClick={() => logWater(mlPerSip, null)}
-            className="w-full mt-2 py-2 rounded-lg bg-[#14171F] border border-[#2A2F3D]
-              text-xs font-semibold text-[#EDEAE0] flex items-center justify-center gap-1.5 min-h-[40px]">
-            <GlassWater size={13} className="text-[#4FC1E0]" />
-            + จิบ {mlPerSip} ml
+        {/* ───── ปุ่มหลับ-ตื่น ───── */}
+        <div className="flex items-center gap-2 mb-6">
+          <button onClick={handleSleepToggle} disabled={!sleepState || sleepBusy}
+            className="flex-1 py-2.5 rounded-lg bg-[#1B1F2A] border border-[#2A2F3D]
+              text-sm font-semibold disabled:opacity-50 min-h-[40px]">
+            {asleep ? '☀️ ตื่นแล้ว' : '😴 เข้านอน'}
+          </button>
+          <button onClick={openEditTime} disabled={!sleepState}
+            className="text-xs text-[#7C8394] px-2 disabled:opacity-50">
+            แก้เวลา
           </button>
         </div>
+
+        {asleep && (
+          <p className="text-xs text-[#7C8394] -mt-4 mb-6 font-mono">
+            หลับมา {hoursAsleep.toFixed(1)} ชม.
+            {wakeEstimate && ` · น่าจะตื่นราว ${fmtHHMM(wakeEstimate)}`}
+          </p>
+        )}
+
+        {editingTime && (
+          <div className="flex items-center gap-2 mb-4">
+            <input type="datetime-local" value={timeInput}
+              onChange={e => setTimeInput(e.target.value)}
+              className="flex-1 min-w-0 bg-[#14171F] border border-[#2A2F3D] rounded-lg
+                px-2 py-1.5 text-xs outline-none focus:border-[#7C8394]" />
+            <button onClick={saveEditTime}
+              className="px-3 py-1.5 rounded-lg bg-[#EDEAE0] text-[#14171F] text-xs font-semibold">
+              บันทึก
+            </button>
+            <button onClick={() => setEditingTime(false)}
+              className="text-xs text-[#7C8394]">ยกเลิก</button>
+          </div>
+        )}
+
+        {/* ───── Secondary stats panel — design.md: จัดกลุ่มใน panel เดียว มีเส้นแบ่งแนวตั้ง ───── */}
+        {/* Panel 1: น้ำหนัก | ก้าว */}
+        <div className="bg-[#1B1F2A] rounded-xl flex mb-3">
+          {/* น้ำหนัก */}
+          <Link href="/health" prefetch={false} className="flex-1 p-4 min-w-0">
+            <p className="text-[11px] text-[#7C8394] tracking-[0.05em] uppercase mb-1">น้ำหนัก</p>
+            <p className="font-mono text-2xl font-semibold leading-none"
+              style={{ color: weightDeltaColor(weightDelta7, plan) }}>
+              {latestWeight != null ? latestWeight.toFixed(1) : '—'}
+            </p>
+            <p className="text-[11px] text-[#7C8394] mt-1 font-mono">
+              {latestWeight == null ? 'ยังไม่ได้ชั่ง' : (
+                <>
+                  กก.
+                  {weightDelta7 != null && weightDelta7 !== 0 && (
+                    ` ${weightDelta7 > 0 ? '↑' : '↓'}${Math.abs(weightDelta7).toFixed(1)}`
+                  )}
+                </>
+              )}
+            </p>
+          </Link>
+
+          {/* divider แนวตั้ง */}
+          <div className="w-px bg-[#2A2F3D] my-3" />
+
+          {/* ก้าว */}
+          <div className="flex-1 p-4 min-w-0">
+            <p className="text-[11px] text-[#7C8394] tracking-[0.05em] uppercase mb-1">ก้าว</p>
+            <p className="font-mono text-2xl font-semibold leading-none">
+              {stepsToday ?? '—'}
+            </p>
+            <p className="text-[11px] text-[#7C8394] mt-1 font-mono">
+              {stepsToday != null ? `เป้า ${stepsGoal.toLocaleString()}` : 'ยังไม่มีข้อมูล'}
+            </p>
+            {stepsToday != null && (
+              <SegmentedBar value={stepsToday} target={stepsGoal} className="mt-2" />
+            )}
+          </div>
+        </div>
+
+        {/* Panel 2: kcal เผา | น้ำ */}
+        <div className="bg-[#1B1F2A] rounded-xl flex mb-6">
+          {/* kcal เผา */}
+          <div className="flex-1 p-4 min-w-0">
+            <p className="text-[11px] text-[#7C8394] tracking-[0.05em] uppercase mb-1">kcal เผา</p>
+            <p className="font-mono text-2xl font-semibold leading-none">
+              {caloriesBurnedToday ?? '—'}
+            </p>
+            <p className="text-[11px] text-[#7C8394] mt-1 font-mono">
+              {caloriesBurnedToday != null ? `เป้า ${caloriesBurnedGoal}` : 'ยังไม่มีข้อมูล'}
+            </p>
+            {caloriesBurnedToday != null && (
+              <SegmentedBar value={caloriesBurnedToday} target={caloriesBurnedGoal} className="mt-2" />
+            )}
+          </div>
+
+          {/* divider แนวตั้ง */}
+          <div className="w-px bg-[#2A2F3D] my-3" />
+
+          {/* น้ำ */}
+          <div className="flex-1 p-4 min-w-0">
+            <p className="text-[11px] text-[#7C8394] tracking-[0.05em] uppercase mb-1">น้ำ</p>
+            <p className="font-mono text-2xl font-semibold leading-none">
+              {(currentMl / 1000).toFixed(1)}
+            </p>
+            <p className="text-[11px] text-[#7C8394] mt-1 font-mono">
+              / {(waterTargetMl / 1000).toFixed(1)} ล.
+            </p>
+            <SegmentedBar value={currentMl} target={waterTargetMl} className="mt-2" />
+          </div>
+        </div>
+
+        {/* ปุ่มบันทึกน้ำ */}
+        <button onClick={() => logWater(mlPerSip, null)}
+          className="w-full mb-8 py-2.5 rounded-lg bg-[#1B1F2A] border border-[#2A2F3D]
+            text-xs font-semibold text-[#EDEAE0] flex items-center justify-center gap-1.5 min-h-[40px]
+            hover:border-[#7C8394] transition-colors">
+          <GlassWater size={13} className="text-[#4FC1E0]" />
+          + จิบ <span className="font-mono">{mlPerSip}</span> ml
+        </button>
       </div>
     </>
   )
