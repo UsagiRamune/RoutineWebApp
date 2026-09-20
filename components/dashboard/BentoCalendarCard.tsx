@@ -1,6 +1,6 @@
-// Bento wrapper สำหรับ CalendarCard — ห่อ card surface รอบ CalendarCard โดยไม่แตะ internal content
-// CalendarCard เดิมเป็น list-row style (accent bar ซ้าย) ที่ออกแบบมาสำหรับ full-width list
-// wrapper นี้ให้ card surface + padding สำหรับ Bento Grid เท่านั้น (layout pass — ดู design.md)
+// BentoCalendarCard — pure grid-placement + Suspense wrapper เท่านั้น
+// CalendarCard (Pass 2) เป็นเจ้าของ surface ทั้งหมดแล้ว (bg, border, rounded, padding)
+// wrapper นี้ไม่มี visual styling ของตัวเอง — ป้องกัน card-in-card / nested border / double accent
 import { Suspense } from 'react'
 import CalendarCard from '@/components/dashboard/CalendarCard'
 import CardSkeleton from '@/components/dashboard/CardSkeleton'
@@ -13,10 +13,8 @@ interface Props {
 
 export default function BentoCalendarCard({ title, className = '' }: Props) {
   return (
-    <div className={`bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl overflow-hidden hover:border-[#7C8394] transition-colors ${className}`}>
-      {/* accent bar ด้านบน — calendar/งาน = #4FC1E0 (design.md) */}
-      <div className="h-[2px] w-8 rounded-full mx-4 mt-4 mb-0 flex-shrink-0 bg-[#4FC1E0]" />
-      {/* CalendarCard เดิม — ไม่แก้ internal เลย (layout pass เท่านั้น) */}
+    // ไม่มี bg/border/rounded/padding ที่นี่ — CalendarCard ถือ surface เองทั้งหมด
+    <div className={className}>
       <Suspense fallback={<CardSkeleton />}>
         <CalendarCard title={title} />
       </Suspense>

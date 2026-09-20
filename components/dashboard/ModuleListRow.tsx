@@ -3,13 +3,13 @@ import { ReactNode } from 'react'
 
 // สีหมวดหมู่จาก design.md — ห้ามเปลี่ยน hex
 const CATEGORY_COLORS: Record<string, string> = {
-  routine:   '#F0A345', // ร่างกาย/สุขภาพ (ส้ม)
-  health:    '#F0A345',
-  workout:   '#F0A345',
+  routine: '#F0A345', // ร่างกาย/สุขภาพ (ส้ม)
+  health: '#F0A345',
+  workout: '#F0A345',
   nutrition: '#F0A345',
-  calendar:  '#4FC1E0', // ปฏิทิน/งาน (ฟ้า)
-  history:   '#4FC1E0',
-  projects:  '#9B7EDE', // โปรเจกต์/สกิล (ม่วง)
+  calendar: '#4FC1E0', // ปฏิทิน/งาน (ฟ้า)
+  history: '#4FC1E0',
+  projects: '#9B7EDE', // โปรเจกต์/สกิล (ม่วง)
 }
 
 interface Props {
