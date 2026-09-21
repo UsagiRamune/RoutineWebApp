@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+﻿import { createClient } from '@/lib/supabase/server'
 import { Module, AppSettings, NotificationSetting } from '@/lib/supabase/types'
 import AppNav from '@/components/AppNav'
 import RealtimeRefresher from '@/components/RealtimeRefresher'
@@ -17,10 +17,10 @@ export default async function SettingsPage() {
     <>
       <AppNav />
       <RealtimeRefresher />
-      <main className="min-h-screen bg-[#14171F] text-[#EDEAE0] pb-16">
+      <main className="min-h-screen bg-[#171412] text-[#EDEAE0] pb-16">
         <div className="max-w-lg mx-auto px-4 pt-8">
           <h1 className="text-xl font-semibold mb-1">ตั้งค่า</h1>
-          <p className="text-sm text-[#7C8394] mb-6">เปิด/ปิดโมดูลที่อยากใช้</p>
+          <p className="text-sm text-[#8A8178] mb-6">เปิด/ปิดโมดูลที่อยากใช้</p>
           <ModulesSettings modules={(modules ?? []) as Module[]} />
 
           <h2 className="text-sm font-semibold mt-8 mb-3">การแจ้งเตือน</h2>

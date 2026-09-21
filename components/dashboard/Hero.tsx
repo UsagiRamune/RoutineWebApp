@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 // hero section ของ dashboard — ไม่มี card wrapper (design.md: hero content ไม่ต้องมีกรอบ)
 // ตัวเลขหลัก (แคล/น้ำหนัก/ก้าว/timestamp) ใช้ Geist Mono ทั้งหมด ผ่าน font-mono class
@@ -165,16 +165,16 @@ export default function Hero({
   return (
     <>
       {wakePrompt.show && (
-        <div className="w-full bg-[#1B1F2A] border-b-2 border-[#F0A345]">
+        <div className="w-full bg-[#201C19] border-b-2 border-[#F0A345]">
           <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
             <p className="text-sm flex-1 min-w-0">ตื่นแล้วใช่ไหม?</p>
             <div className="flex gap-2 flex-shrink-0">
               <button onClick={() => handleWakeConfirm(true)}
-                className="px-4 py-2.5 rounded-lg bg-[#F0A345] text-[#14171F] text-sm font-semibold min-h-[40px]">
+                className="px-4 py-2.5 rounded-lg bg-[#F0A345] text-[#171412] text-sm font-semibold min-h-[40px]">
                 ตื่นแล้ว
               </button>
               <button onClick={() => handleWakeConfirm(false)}
-                className="px-4 py-2.5 rounded-lg border border-[#2A2F3D] text-xs text-[#7C8394] min-h-[40px]">
+                className="px-4 py-2.5 rounded-lg border border-[#332D28] text-xs text-[#8A8178] min-h-[40px]">
                 ยังไม่ตื่น
               </button>
             </div>
@@ -191,9 +191,9 @@ export default function Hero({
 
         {/* วันที่ + IF chip */}
         <div className="flex items-center justify-between mb-6">
-          <p className="text-sm text-[#7C8394]">{todayLabel}</p>
+          <p className="text-sm text-[#8A8178]">{todayLabel}</p>
           {ifChip && (
-            <span className="text-xs px-2.5 py-1 rounded-full bg-[#1B1F2A] border border-[#2A2F3D]
+            <span className="text-xs px-2.5 py-1 rounded-full bg-[#201C19] border border-[#332D28]
               text-[#4FC1E0] font-medium font-mono">
               {ifChip}
             </span>
@@ -203,22 +203,22 @@ export default function Hero({
         {/* ─── แคลอรี่ hero — ตัวเลขใหญ่สุดในหน้า ─── */}
         {/* design.md: ค่าจริงต้องใหญ่/หนักกว่าเป้า, ห้ามโชว์ % หรือ remaining แบบเด่น */}
         <div className="mb-1">
-          <p className="text-[11px] text-[#7C8394] tracking-[0.05em] uppercase mb-2">แคลอรี่วันนี้</p>
+          <p className="text-[11px] text-[#8A8178] tracking-[0.05em] uppercase mb-2">แคลอรี่วันนี้</p>
           <div className="flex items-baseline gap-3">
             <span className="font-mono text-7xl font-semibold leading-none tracking-tight">
               {Math.round(caloriesEaten)}
             </span>
-            <span className="text-sm text-[#7C8394]">kcal</span>
+            <span className="text-sm text-[#8A8178]">kcal</span>
           </div>
           {/* เป้า + ขาด/เกิน — เล็กจาง ไม่ใช่ประเด็นหลัก (design.md) */}
-          <p className={`text-xs mt-2 font-mono ${overTarget ? 'text-[#E4574A]' : 'text-[#7C8394]'}`}>
+          <p className={`text-xs mt-2 font-mono ${overTarget ? 'text-[#E4574A]' : 'text-[#8A8178]'}`}>
             {caloriesTarget === null
               ? 'ยังไม่ตั้งเป้า — ไปตั้งที่หน้าโภชนาการ'
               : caloriesGap !== null && caloriesGap >= 0
                 ? `เป้า ${caloriesTarget} kcal · ขาดอีก ${caloriesGap}`
                 : `เป้า ${caloriesTarget} kcal · เกิน ${Math.abs(caloriesGap ?? 0)}`}
           </p>
-          {tdeeText && <p className="text-[10px] text-[#7C8394] mt-0.5">{tdeeText}</p>}
+          {tdeeText && <p className="text-[10px] text-[#8A8178] mt-0.5">{tdeeText}</p>}
         </div>
 
         {/* Segmented bar แคลอรี่ */}
@@ -234,7 +234,7 @@ export default function Hero({
 
         {/* โปรตีน — secondary metric */}
         <div className="mb-1">
-          <p className="text-xs text-[#7C8394]">
+          <p className="text-xs text-[#8A8178]">
             โปรตีน{' '}
             <span className="font-mono">{Math.round(proteinEaten)}</span>
             {proteinTarget !== null && (
@@ -253,18 +253,18 @@ export default function Hero({
         {/* ───── ปุ่มหลับ-ตื่น ───── */}
         <div className="flex items-center gap-2 mb-6">
           <button onClick={handleSleepToggle} disabled={!sleepState || sleepBusy}
-            className="flex-1 py-2.5 rounded-lg bg-[#1B1F2A] border border-[#2A2F3D]
+            className="flex-1 py-2.5 rounded-lg bg-[#201C19] border border-[#332D28]
               text-sm font-semibold disabled:opacity-50 min-h-[40px]">
             {asleep ? '☀️ ตื่นแล้ว' : '😴 เข้านอน'}
           </button>
           <button onClick={openEditTime} disabled={!sleepState}
-            className="text-xs text-[#7C8394] px-2 disabled:opacity-50">
+            className="text-xs text-[#8A8178] px-2 disabled:opacity-50">
             แก้เวลา
           </button>
         </div>
 
         {asleep && (
-          <p className="text-xs text-[#7C8394] -mt-4 mb-6 font-mono">
+          <p className="text-xs text-[#8A8178] -mt-4 mb-6 font-mono">
             หลับมา {hoursAsleep.toFixed(1)} ชม.
             {wakeEstimate && ` · น่าจะตื่นราว ${fmtHHMM(wakeEstimate)}`}
           </p>
@@ -274,28 +274,28 @@ export default function Hero({
           <div className="flex items-center gap-2 mb-4">
             <input type="datetime-local" value={timeInput}
               onChange={e => setTimeInput(e.target.value)}
-              className="flex-1 min-w-0 bg-[#14171F] border border-[#2A2F3D] rounded-lg
-                px-2 py-1.5 text-xs outline-none focus:border-[#7C8394]" />
+              className="flex-1 min-w-0 bg-[#171412] border border-[#332D28] rounded-lg
+                px-2 py-1.5 text-xs outline-none focus:border-[#8A8178]" />
             <button onClick={saveEditTime}
-              className="px-3 py-1.5 rounded-lg bg-[#EDEAE0] text-[#14171F] text-xs font-semibold">
+              className="px-3 py-1.5 rounded-lg bg-[#EDEAE0] text-[#171412] text-xs font-semibold">
               บันทึก
             </button>
             <button onClick={() => setEditingTime(false)}
-              className="text-xs text-[#7C8394]">ยกเลิก</button>
+              className="text-xs text-[#8A8178]">ยกเลิก</button>
           </div>
         )}
 
         {/* ───── Secondary stats panel — design.md: จัดกลุ่มใน panel เดียว มีเส้นแบ่งแนวตั้ง ───── */}
         {/* Panel 1: น้ำหนัก | ก้าว */}
-        <div className="bg-[#1B1F2A] rounded-xl flex mb-3">
+        <div className="bg-[#201C19] rounded-xl flex mb-3">
           {/* น้ำหนัก */}
           <Link href="/health" prefetch={false} className="flex-1 p-4 min-w-0">
-            <p className="text-[11px] text-[#7C8394] tracking-[0.05em] uppercase mb-1">น้ำหนัก</p>
+            <p className="text-[11px] text-[#8A8178] tracking-[0.05em] uppercase mb-1">น้ำหนัก</p>
             <p className="font-mono text-2xl font-semibold leading-none"
               style={{ color: weightDeltaColor(weightDelta7, plan) }}>
               {latestWeight != null ? latestWeight.toFixed(1) : '—'}
             </p>
-            <p className="text-[11px] text-[#7C8394] mt-1 font-mono">
+            <p className="text-[11px] text-[#8A8178] mt-1 font-mono">
               {latestWeight == null ? 'ยังไม่ได้ชั่ง' : (
                 <>
                   กก.
@@ -308,15 +308,15 @@ export default function Hero({
           </Link>
 
           {/* divider แนวตั้ง */}
-          <div className="w-px bg-[#2A2F3D] my-3" />
+          <div className="w-px bg-[#332D28] my-3" />
 
           {/* ก้าว */}
           <div className="flex-1 p-4 min-w-0">
-            <p className="text-[11px] text-[#7C8394] tracking-[0.05em] uppercase mb-1">ก้าว</p>
+            <p className="text-[11px] text-[#8A8178] tracking-[0.05em] uppercase mb-1">ก้าว</p>
             <p className="font-mono text-2xl font-semibold leading-none">
               {stepsToday ?? '—'}
             </p>
-            <p className="text-[11px] text-[#7C8394] mt-1 font-mono">
+            <p className="text-[11px] text-[#8A8178] mt-1 font-mono">
               {stepsToday != null ? `เป้า ${stepsGoal.toLocaleString()}` : 'ยังไม่มีข้อมูล'}
             </p>
             {stepsToday != null && (
@@ -326,14 +326,14 @@ export default function Hero({
         </div>
 
         {/* Panel 2: kcal เผา | น้ำ */}
-        <div className="bg-[#1B1F2A] rounded-xl flex mb-6">
+        <div className="bg-[#201C19] rounded-xl flex mb-6">
           {/* kcal เผา */}
           <div className="flex-1 p-4 min-w-0">
-            <p className="text-[11px] text-[#7C8394] tracking-[0.05em] uppercase mb-1">kcal เผา</p>
+            <p className="text-[11px] text-[#8A8178] tracking-[0.05em] uppercase mb-1">kcal เผา</p>
             <p className="font-mono text-2xl font-semibold leading-none">
               {caloriesBurnedToday ?? '—'}
             </p>
-            <p className="text-[11px] text-[#7C8394] mt-1 font-mono">
+            <p className="text-[11px] text-[#8A8178] mt-1 font-mono">
               {caloriesBurnedToday != null ? `เป้า ${caloriesBurnedGoal}` : 'ยังไม่มีข้อมูล'}
             </p>
             {caloriesBurnedToday != null && (
@@ -342,15 +342,15 @@ export default function Hero({
           </div>
 
           {/* divider แนวตั้ง */}
-          <div className="w-px bg-[#2A2F3D] my-3" />
+          <div className="w-px bg-[#332D28] my-3" />
 
           {/* น้ำ */}
           <div className="flex-1 p-4 min-w-0">
-            <p className="text-[11px] text-[#7C8394] tracking-[0.05em] uppercase mb-1">น้ำ</p>
+            <p className="text-[11px] text-[#8A8178] tracking-[0.05em] uppercase mb-1">น้ำ</p>
             <p className="font-mono text-2xl font-semibold leading-none">
               {(currentMl / 1000).toFixed(1)}
             </p>
-            <p className="text-[11px] text-[#7C8394] mt-1 font-mono">
+            <p className="text-[11px] text-[#8A8178] mt-1 font-mono">
               / {(waterTargetMl / 1000).toFixed(1)} ล.
             </p>
             <SegmentedBar value={currentMl} target={waterTargetMl} className="mt-2" />
@@ -359,9 +359,9 @@ export default function Hero({
 
         {/* ปุ่มบันทึกน้ำ */}
         <button onClick={() => logWater(mlPerSip, null)}
-          className="w-full mb-8 py-2.5 rounded-lg bg-[#1B1F2A] border border-[#2A2F3D]
+          className="w-full mb-8 py-2.5 rounded-lg bg-[#201C19] border border-[#332D28]
             text-xs font-semibold text-[#EDEAE0] flex items-center justify-center gap-1.5 min-h-[40px]
-            hover:border-[#7C8394] transition-colors">
+            hover:border-[#8A8178] transition-colors">
           <GlassWater size={13} className="text-[#4FC1E0]" />
           + จิบ <span className="font-mono">{mlPerSip}</span> ml
         </button>

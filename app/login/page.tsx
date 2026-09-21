@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 // หน้าเข้าสู่ระบบด้วย Google + Magic Link
 import { Suspense, useState } from 'react'
@@ -38,10 +38,10 @@ function LoginForm() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-[#14171F] px-4">
-      <div className="w-full max-w-sm bg-[#1B1F2A] border border-[#2A2F3D] rounded-2xl p-8">
+    <main className="min-h-screen flex items-center justify-center bg-[#171412] px-4">
+      <div className="w-full max-w-sm bg-[#201C19] border border-[#332D28] rounded-2xl p-8">
         <h1 className="text-xl font-semibold text-[#EDEAE0] mb-1">RoutineWebApp</h1>
-        <p className="text-sm text-[#7C8394] mb-6">
+        <p className="text-sm text-[#8A8178] mb-6">
           ใส่อีเมลแล้วกดส่งลิงก์ ไม่ต้องใช้รหัสผ่าน
         </p>
 
@@ -59,13 +59,13 @@ function LoginForm() {
           <>
             <button
               onClick={handleGoogleLogin}
-              className="w-full rounded-lg border border-[#2A2F3D] bg-[#14171F] py-2.5
+              className="w-full rounded-lg border border-[#332D28] bg-[#171412] py-2.5
                          text-sm font-semibold text-[#EDEAE0] mb-4"
             >
               เข้าสู่ระบบด้วย Google
             </button>
 
-            <div className="text-center text-xs text-[#7C8394] mb-4">
+            <div className="text-center text-xs text-[#8A8178] mb-4">
               หรือใช้ลิงก์ทางอีเมล
             </div>
 
@@ -75,13 +75,13 @@ function LoginForm() {
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSendLink()}
               placeholder="อีเมลของมึง"
-              className="w-full rounded-lg bg-[#14171F] border border-[#2A2F3D] px-4 py-2.5
-                         text-[#EDEAE0] text-sm outline-none focus:border-[#7C8394]"
+              className="w-full rounded-lg bg-[#171412] border border-[#332D28] px-4 py-2.5
+                         text-[#EDEAE0] text-sm outline-none focus:border-[#8A8178]"
             />
             <button
               onClick={handleSendLink}
               disabled={status === 'sending'}
-              className="w-full mt-3 rounded-lg bg-[#EDEAE0] text-[#14171F] py-2.5
+              className="w-full mt-3 rounded-lg bg-[#EDEAE0] text-[#171412] py-2.5
                          text-sm font-semibold disabled:opacity-50"
             >
               {status === 'sending' ? 'กำลังส่ง...' : 'ส่งลิงก์เข้าอีเมล'}

@@ -414,10 +414,13 @@ export interface WorkoutExerciseRef {
   round: number
 }
 
+export type WorkoutSessionType = 'morning_warmup' | 'morning_cooldown' | 'evening'
+
 export interface WorkoutSession {
   id: string
   date: string
   day_id: string | null
+  session_type: WorkoutSessionType
   started_at: string
   completed_at: string | null
   exercises_done: WorkoutExerciseRef[]
@@ -427,4 +430,35 @@ export interface WorkoutSession {
 
 export interface WorkoutSessionWithDay extends WorkoutSession {
   workout_days: { label: string; kind: WorkoutDayKind } | null
+}
+
+// ---------- เดินเช้า (ยืนยันผ่าน Strava) + วอร์มอัพ/คูลดาวน์ ----------
+
+export interface StravaConnection {
+  id: number
+  athlete_id: number | null
+  access_token: string | null
+  refresh_token: string | null
+  expires_at: string | null
+}
+
+export interface MorningWalkCheck {
+  date: string
+  strava_confirmed: boolean
+  manual_override: boolean
+  checked_at: string
+}
+
+export type MorningWalkBlock = 'warmup' | 'cooldown'
+
+export interface MorningWalkExercise {
+  id: string
+  block: MorningWalkBlock
+  sort_order: number
+  name: string
+  category: WorkoutCategory | null
+  instructions: string
+  reps_label: string | null
+  duration_seconds: number | null
+  per_side: boolean
 }

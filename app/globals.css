@@ -1,13 +1,25 @@
 @import "tailwindcss";
 
+/* ─── Warm dark neutral palette — แก้ที่นี่ที่เดียวเมื่อต้องการ update palette ───
+   semantic accent colors (orange/cyan/purple/red) ไม่อยู่ในนี้ — คงค่าใน Tailwind class ตรงๆ
+   ตาม design.md: ห้ามเปลี่ยน hex ของ accent colors */
 :root {
-  --background: #14171F;
-  --foreground: #EDEAE0;
+  /* neutrals */
+  --background:  #171412;   /* page background — deepest warm tone */
+  --surface:     #201C19;   /* card / panel surface — elevated above bg */
+  --border:      #332D28;   /* border / divider — subtle warm separator */
+  --foreground:  #EDEAE0;   /* primary text — high contrast */
+  --muted:       #8A8178;   /* muted labels, secondary text, icons */
+  --muted-deep:  #4A4440;   /* deep muted — adjacent-month dates, idle decorative elements */
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface:    var(--surface);
+  --color-border:     var(--border);
+  --color-muted:      var(--muted);
+  --color-muted-deep: var(--muted-deep);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

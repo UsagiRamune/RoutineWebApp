@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 // วงแหวนนับถอยหลัง SVG — ใช้ทั้งตอนจับเวลาท่า (duration_seconds) และหน้าจอพัก (rest)
 interface Props {
@@ -20,7 +20,7 @@ export default function CountdownRing({ totalSeconds, secondsLeft, size = 176, c
   return (
     <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={radius} stroke="#2A2F3D" strokeWidth={stroke} fill="none" />
+        <circle cx={size / 2} cy={size / 2} r={radius} stroke="#332D28" strokeWidth={stroke} fill="none" />
         <circle cx={size / 2} cy={size / 2} r={radius} stroke={color} strokeWidth={stroke} fill="none"
           strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset}
           style={{ transition: 'stroke-dashoffset 1s linear' }} />
@@ -30,7 +30,7 @@ export default function CountdownRing({ totalSeconds, secondsLeft, size = 176, c
           style={{ color: urgent ? '#F0A345' : undefined }}>
           {Math.max(0, secondsLeft)}
         </span>
-        {label && <span className="text-[10px] text-[#7C8394] mt-0.5">{label}</span>}
+        {label && <span className="text-[10px] text-[#8A8178] mt-0.5">{label}</span>}
       </div>
     </div>
   )

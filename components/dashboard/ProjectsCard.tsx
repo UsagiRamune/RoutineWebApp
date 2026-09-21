@@ -1,4 +1,4 @@
-// การ์ดโปรเจกต์บน dashboard — แยกออกมาเป็น async server component ของตัวเอง (query project_fields/
+﻿// การ์ดโปรเจกต์บน dashboard — แยกออกมาเป็น async server component ของตัวเอง (query project_fields/
 // project_tasks ซ้อนกันหลายชั้น ไม่ใช่ query เบาๆ) ให้ stream ผ่าน Suspense ได้อิสระจากส่วนอื่นของหน้า (Part 5)
 // ปรับ styling เป็น list-row style (design.md) — accent bar #9B7EDE = โปรเจกต์/สกิล
 import { createClient } from '@/lib/supabase/server'
@@ -45,29 +45,29 @@ export default async function ProjectsCard({ title, weekStart }: Props) {
   return (
     <Link href="/projects" prefetch={false}
       className="flex items-center gap-4 py-3.5 pl-0 pr-2
-        hover:bg-[#1B1F2A] rounded-r-lg transition-colors group border-y border-[#2A2F3D]">
+        hover:bg-[#201C19] rounded-r-lg transition-colors group border-y border-[#332D28]">
       {/* accent bar — โปรเจกต์/สกิล = #9B7EDE (design.md) */}
       <div className="w-[3px] self-stretch rounded-r-full flex-shrink-0 bg-[#9B7EDE]" />
 
       <div className="flex-1 min-w-0">
-        <p className="text-[11px] text-[#7C8394] tracking-[0.05em] uppercase mb-0.5">{title}</p>
+        <p className="text-[11px] text-[#8A8178] tracking-[0.05em] uppercase mb-0.5">{title}</p>
         {topProject ? (
           <>
             <div className="flex items-baseline gap-2">
               <span className="text-sm font-medium truncate">{topProject.name}</span>
               <span className="font-mono text-sm font-semibold">
-                {pct}<span className="text-xs font-normal text-[#7C8394]">%</span>
+                {pct}<span className="text-xs font-normal text-[#8A8178]">%</span>
               </span>
             </div>
-            <p className="text-xs text-[#7C8394] mt-0.5">{activeProjects.length} โปรเจกต์กำลังทำ</p>
+            <p className="text-xs text-[#8A8178] mt-0.5">{activeProjects.length} โปรเจกต์กำลังทำ</p>
             <SegmentedBar value={pct} target={100} color="#9B7EDE" className="mt-2 max-w-[160px]" />
           </>
         ) : (
-          <p className="text-sm text-[#7C8394]">ยังไม่มีโปรเจกต์</p>
+          <p className="text-sm text-[#8A8178]">ยังไม่มีโปรเจกต์</p>
         )}
       </div>
 
-      <svg className="w-4 h-4 text-[#2A2F3D] group-hover:text-[#7C8394] transition-colors flex-shrink-0"
+      <svg className="w-4 h-4 text-[#332D28] group-hover:text-[#8A8178] transition-colors flex-shrink-0"
         fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
       </svg>

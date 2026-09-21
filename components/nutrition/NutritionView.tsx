@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 // UI หน้าโภชนาการ: ประเมินอาหารด้วย AI, เป้าหมาย, น้ำดื่ม, IF timer
 // (อาหารเสริม/เวย์ย้ายไปอยู่หน้าร่างกาย /health แล้ว)
@@ -12,7 +12,7 @@ import {
 import { ifStatus, fmtRemaining } from '@/lib/nutrition'
 import { remainingInContainer } from '@/lib/water'
 import { TZ } from '@/lib/dates'
-import { GlassWater, Plus, X, Trash2, Sparkles } from 'lucide-react'
+import { GlassWater, Plus, X, Trash2, Sparkles, Camera } from 'lucide-react'
 import Toggle from '@/components/ui/Toggle'
 import ProgressBar from '@/components/ui/ProgressBar'
 
@@ -85,18 +85,35 @@ export default function NutritionView({
   const [estimateDraft, setEstimateDraft] = useState<EstimateDraft | null>(null)
   const [manualMode, setManualMode] = useState(false)
   const [manualDraft, setManualDraft] = useState<Draft>(emptyDraft)
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null)
+
+  function pickPhoto(file: File | null) {
+    setPhotoPreviewUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null })
+    setPhotoFile(file)
+    if (file) setPhotoPreviewUrl(URL.createObjectURL(file))
+  }
 
   async function runEstimate() {
-    if (!description.trim()) return
+    if (!description.trim() && !photoFile) return
     setEstimating(true)
     setEstimateError('')
     setEstimateDraft(null)
     try {
-      const res = await fetch('/api/nutrition/estimate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: description.trim(), meal: MEAL_LABELS[addMeal] }),
-      })
+      let res: Response
+      if (photoFile) {
+        const form = new FormData()
+        form.set('image', photoFile)
+        form.set('description', description.trim())
+        form.set('meal', MEAL_LABELS[addMeal])
+        res = await fetch('/api/nutrition/estimate', { method: 'POST', body: form })
+      } else {
+        res = await fetch('/api/nutrition/estimate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ description: description.trim(), meal: MEAL_LABELS[addMeal] }),
+        })
+      }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       const r = data.result
@@ -133,6 +150,7 @@ export default function NutritionView({
     })
     setEstimateDraft(null)
     setDescription('')
+    pickPhoto(null)
   }
 
   function updateManualDraft(field: keyof Draft, value: string) {
@@ -268,10 +286,10 @@ export default function NutritionView({
 
   // ---------- render ----------
 
-  const inputCls = 'bg-[#14171F] border border-[#2A2F3D] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#7C8394] min-h-[40px]'
+  const inputCls = 'bg-[#171412] border border-[#332D28] rounded-lg px-3 py-2 text-sm outline-none focus:border-[#8A8178] min-h-[40px]'
 
   return (
-    <main className="min-h-screen bg-[#14171F] text-[#EDEAE0] pb-16">
+    <main className="min-h-screen bg-[#171412] text-[#EDEAE0] pb-16">
       <div className="max-w-5xl mx-auto px-4 pt-8">
         <h1 className="text-xl font-semibold mb-6">โภชนาการ</h1>
 
@@ -279,19 +297,19 @@ export default function NutritionView({
           {/* ---------- คอลัมน์ซ้าย: เพิ่มอาหาร + meal log ---------- */}
           <div>
             {/* สรุปแมโคร */}
-            <div className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4 mb-4">
+            <div className="bg-[#201C19] border border-[#332D28] rounded-xl p-4 mb-4">
               <p className="text-3xl font-semibold tabular-nums">
-                {Math.round(totals.calories)} <span className="text-sm font-normal text-[#7C8394]">kcal</span>
+                {Math.round(totals.calories)} <span className="text-sm font-normal text-[#8A8178]">kcal</span>
               </p>
               <div className="flex gap-2 mt-2">
-                <span className="text-xs px-2 py-1 rounded-md bg-[#14171F] border border-[#2A2F3D]">
+                <span className="text-xs px-2 py-1 rounded-md bg-[#171412] border border-[#332D28]">
                   โปรตีน {totals.protein.toFixed(0)}
                   {profile?.daily_protein_g != null && `/${profile.daily_protein_g}`} ก.
                 </span>
-                <span className="text-xs px-2 py-1 rounded-md bg-[#14171F] border border-[#2A2F3D]">
+                <span className="text-xs px-2 py-1 rounded-md bg-[#171412] border border-[#332D28]">
                   คาร์บ {totals.carbs.toFixed(0)} ก.
                 </span>
-                <span className="text-xs px-2 py-1 rounded-md bg-[#14171F] border border-[#2A2F3D]">
+                <span className="text-xs px-2 py-1 rounded-md bg-[#171412] border border-[#332D28]">
                   ไขมัน {totals.fat.toFixed(0)} ก.
                 </span>
               </div>
@@ -301,12 +319,12 @@ export default function NutritionView({
             </div>
 
             {/* เพิ่มอาหาร */}
-            <div className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4 mb-4">
+            <div className="bg-[#201C19] border border-[#332D28] rounded-xl p-4 mb-4">
               <div className="flex flex-wrap gap-1.5 mb-3">
                 {MEALS.map(m => (
                   <button key={m} onClick={() => setAddMeal(m)}
                     className={`px-3 py-2 rounded-lg text-xs font-semibold border min-h-[40px]
-                      ${addMeal === m ? 'bg-[#EDEAE0] text-[#14171F] border-[#EDEAE0]' : 'border-[#2A2F3D] text-[#7C8394]'}`}>
+                      ${addMeal === m ? 'bg-[#EDEAE0] text-[#171412] border-[#EDEAE0]' : 'border-[#332D28] text-[#8A8178]'}`}>
                     {MEAL_LABELS[m]}
                   </button>
                 ))}
@@ -314,12 +332,31 @@ export default function NutritionView({
 
               {!manualMode ? (
                 <>
-                  <textarea value={description} rows={2}
-                    onChange={e => setDescription(e.target.value)}
-                    placeholder="พิมพ์คร่าวๆ เช่น กะเพราหมูกรอบไข่ดาว ข้าวน้อย ไข่ 2 ฟอง"
-                    className={`w-full ${inputCls} resize-none`} />
-                  <button onClick={runEstimate} disabled={estimating || !description.trim()}
-                    className="w-full mt-2 py-2.5 rounded-lg bg-[#EDEAE0] text-[#14171F]
+                  <div className="flex gap-2 items-start">
+                    <textarea value={description} rows={2}
+                      onChange={e => setDescription(e.target.value)}
+                      placeholder={photoFile ? 'เสริมข้อความได้ (ถ้ามี) เช่น ข้าวน้อย' :
+                        'พิมพ์คร่าวๆ เช่น กะเพราหมูกรอบไข่ดาว ข้าวน้อย ไข่ 2 ฟอง'}
+                      className={`flex-1 min-w-0 ${inputCls} resize-none`} />
+                    <label className="flex-shrink-0 w-11 h-11 rounded-lg border border-[#332D28]
+                      flex items-center justify-center text-[#8A8178] cursor-pointer">
+                      <Camera size={16} />
+                      <input type="file" accept="image/*" capture="environment" className="hidden"
+                        onChange={e => pickPhoto(e.target.files?.[0] ?? null)} />
+                    </label>
+                  </div>
+                  {photoPreviewUrl && (
+                    <div className="flex items-center gap-2 mt-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- preview รูปจาก blob: URL ในเครื่อง ไม่ใช่ remote asset ใช้ next/image ไม่ได้ */}
+                      <img src={photoPreviewUrl} alt="รูปอาหารที่แนบ"
+                        className="w-14 h-14 rounded-lg object-cover border border-[#332D28]" />
+                      <span className="text-xs text-[#8A8178] flex-1">แนบรูปแล้ว — AI จะประเมินจากรูปนี้</span>
+                      <button onClick={() => pickPhoto(null)}
+                        className="text-[#8A8178] p-1 flex-shrink-0"><X size={14} /></button>
+                    </div>
+                  )}
+                  <button onClick={runEstimate} disabled={estimating || (!description.trim() && !photoFile)}
+                    className="w-full mt-2 py-2.5 rounded-lg bg-[#EDEAE0] text-[#171412]
                       text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1.5">
                     <Sparkles size={14} /> {estimating ? 'กำลังประเมิน...' : 'ให้ AI ตีเป็นแคล'}
                   </button>
@@ -331,7 +368,7 @@ export default function NutritionView({
                         <input value={estimateDraft.name}
                           onChange={e => updateEstimateDraft('name', e.target.value)}
                           className="flex-1 bg-transparent text-sm font-medium outline-none
-                            border-b border-transparent focus:border-[#2A2F3D]" />
+                            border-b border-transparent focus:border-[#332D28]" />
                         <span className="text-[10px] px-2 py-0.5 rounded-full flex-shrink-0 ml-2"
                           style={{ color: CONFIDENCE_COLOR[estimateDraft.confidence],
                             border: `1px solid ${CONFIDENCE_COLOR[estimateDraft.confidence]}` }}>
@@ -341,27 +378,27 @@ export default function NutritionView({
                       <div className="grid grid-cols-4 gap-2">
                         <input value={estimateDraft.calories} type="number" placeholder="kcal"
                           onChange={e => updateEstimateDraft('calories', e.target.value)}
-                          className="min-w-0 bg-[#14171F] border border-[#2A2F3D] rounded-lg px-2 py-1.5 text-xs outline-none" />
+                          className="min-w-0 bg-[#171412] border border-[#332D28] rounded-lg px-2 py-1.5 text-xs outline-none" />
                         <input value={estimateDraft.protein} type="number" placeholder="P"
                           onChange={e => updateEstimateDraft('protein', e.target.value)}
-                          className="min-w-0 bg-[#14171F] border border-[#2A2F3D] rounded-lg px-2 py-1.5 text-xs outline-none" />
+                          className="min-w-0 bg-[#171412] border border-[#332D28] rounded-lg px-2 py-1.5 text-xs outline-none" />
                         <input value={estimateDraft.carbs} type="number" placeholder="C"
                           onChange={e => updateEstimateDraft('carbs', e.target.value)}
-                          className="min-w-0 bg-[#14171F] border border-[#2A2F3D] rounded-lg px-2 py-1.5 text-xs outline-none" />
+                          className="min-w-0 bg-[#171412] border border-[#332D28] rounded-lg px-2 py-1.5 text-xs outline-none" />
                         <input value={estimateDraft.fat} type="number" placeholder="F"
                           onChange={e => updateEstimateDraft('fat', e.target.value)}
-                          className="min-w-0 bg-[#14171F] border border-[#2A2F3D] rounded-lg px-2 py-1.5 text-xs outline-none" />
+                          className="min-w-0 bg-[#171412] border border-[#332D28] rounded-lg px-2 py-1.5 text-xs outline-none" />
                       </div>
                       {estimateDraft.assumptions && (
-                        <p className="text-[11px] text-[#7C8394]">{estimateDraft.assumptions}</p>
+                        <p className="text-[11px] text-[#8A8178]">{estimateDraft.assumptions}</p>
                       )}
                       <div className="flex gap-2">
                         <button onClick={() => setEstimateDraft(null)}
-                          className="flex-1 py-2 rounded-lg border border-[#2A2F3D] text-xs text-[#7C8394]">
+                          className="flex-1 py-2 rounded-lg border border-[#332D28] text-xs text-[#8A8178]">
                           ยกเลิก
                         </button>
                         <button onClick={saveEstimate}
-                          className="flex-1 py-2 rounded-lg bg-[#4FC1E0] text-[#14171F] text-xs font-semibold">
+                          className="flex-1 py-2 rounded-lg bg-[#4FC1E0] text-[#171412] text-xs font-semibold">
                           บันทึก
                         </button>
                       </div>
@@ -377,30 +414,30 @@ export default function NutritionView({
                   <div className="grid grid-cols-4 gap-2">
                     <input value={manualDraft.calories} type="number" min="0" placeholder="kcal"
                       onChange={e => updateManualDraft('calories', e.target.value)}
-                      className="min-w-0 bg-[#14171F] border border-[#2A2F3D] rounded-lg px-2 py-2 text-xs outline-none" />
+                      className="min-w-0 bg-[#171412] border border-[#332D28] rounded-lg px-2 py-2 text-xs outline-none" />
                     <input value={manualDraft.protein} type="number" min="0" placeholder="P (ก.)"
                       onChange={e => updateManualDraft('protein', e.target.value)}
-                      className="min-w-0 bg-[#14171F] border border-[#2A2F3D] rounded-lg px-2 py-2 text-xs outline-none" />
+                      className="min-w-0 bg-[#171412] border border-[#332D28] rounded-lg px-2 py-2 text-xs outline-none" />
                     <input value={manualDraft.carbs} type="number" min="0" placeholder="C (ก.)"
                       onChange={e => updateManualDraft('carbs', e.target.value)}
-                      className="min-w-0 bg-[#14171F] border border-[#2A2F3D] rounded-lg px-2 py-2 text-xs outline-none" />
+                      className="min-w-0 bg-[#171412] border border-[#332D28] rounded-lg px-2 py-2 text-xs outline-none" />
                     <input value={manualDraft.fat} type="number" min="0" placeholder="F (ก.)"
                       onChange={e => updateManualDraft('fat', e.target.value)}
-                      className="min-w-0 bg-[#14171F] border border-[#2A2F3D] rounded-lg px-2 py-2 text-xs outline-none" />
+                      className="min-w-0 bg-[#171412] border border-[#332D28] rounded-lg px-2 py-2 text-xs outline-none" />
                   </div>
                   <div className="flex gap-2">
                     <input value={manualDraft.note} placeholder="โน้ต (ถ้ามี)..."
                       onChange={e => updateManualDraft('note', e.target.value)}
                       className={`flex-1 min-w-0 ${inputCls}`} />
                     <button onClick={saveManual}
-                      className="px-4 rounded-lg bg-[#EDEAE0] text-[#14171F]
+                      className="px-4 rounded-lg bg-[#EDEAE0] text-[#171412]
                         text-xs font-semibold flex-shrink-0 min-h-[40px]">เพิ่ม</button>
                   </div>
                 </div>
               )}
 
               <button onClick={() => setManualMode(m => !m)}
-                className="text-xs text-[#7C8394] mt-3 underline">
+                className="text-xs text-[#8A8178] mt-3 underline">
                 {manualMode ? 'ใช้ AI ประเมินแทน' : 'กรอกเองแบบละเอียด'}
               </button>
             </div>
@@ -414,11 +451,11 @@ export default function NutritionView({
                   <h2 className="text-sm font-semibold mb-2">{MEAL_LABELS[meal]}</h2>
                   {mealEntries.map(e => (
                     <div key={e.id}
-                      className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-3 mb-2
+                      className="bg-[#201C19] border border-[#332D28] rounded-xl p-3 mb-2
                         flex items-center gap-2">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm truncate">{e.name}</p>
-                        <p className="text-xs text-[#7C8394] tabular-nums">
+                        <p className="text-xs text-[#8A8178] tabular-nums">
                           {e.calories ?? 0} kcal
                           {(e.protein_g || e.carbs_g || e.fat_g) &&
                             ` · P${e.protein_g ?? 0} C${e.carbs_g ?? 0} F${e.fat_g ?? 0}`}
@@ -426,43 +463,43 @@ export default function NutritionView({
                         </p>
                       </div>
                       <button onClick={() => deleteFood(e.id)}
-                        className="text-[#7C8394] p-2 flex-shrink-0"><Trash2 size={13} /></button>
+                        className="text-[#8A8178] p-2 flex-shrink-0"><Trash2 size={13} /></button>
                     </div>
                   ))}
                 </section>
               )
             })}
             {entries.length === 0 && (
-              <p className="text-xs text-[#7C8394]">ยังไม่มีบันทึกอาหารวันนี้</p>
+              <p className="text-xs text-[#8A8178]">ยังไม่มีบันทึกอาหารวันนี้</p>
             )}
           </div>
 
           {/* ---------- คอลัมน์ขวา: เป้าหมาย, น้ำ, IF ---------- */}
           <div>
             {/* เป้าหมาย */}
-            <div className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4 mb-4">
-              <p className="text-xs text-[#7C8394] mb-2">เป้าหมาย</p>
+            <div className="bg-[#201C19] border border-[#332D28] rounded-xl p-4 mb-4">
+              <p className="text-xs text-[#8A8178] mb-2">เป้าหมาย</p>
               <div className="flex gap-2 mb-3">
                 {(['cut', 'normal', 'bulk'] as const).map(p => (
                   <button key={p} onClick={() => setSelectedPlan(p)}
                     className={`flex-1 px-2 py-2 rounded-lg text-xs font-semibold border min-h-[40px]
-                      ${selectedPlan === p ? 'bg-[#EDEAE0] text-[#14171F] border-[#EDEAE0]' : 'border-[#2A2F3D] text-[#7C8394]'}`}>
+                      ${selectedPlan === p ? 'bg-[#EDEAE0] text-[#171412] border-[#EDEAE0]' : 'border-[#332D28] text-[#8A8178]'}`}>
                     {PLAN_LABELS[p]}
                   </button>
                 ))}
               </div>
               {profile ? (
-                <div className="text-xs text-[#7C8394] space-y-0.5 mb-3">
+                <div className="text-xs text-[#8A8178] space-y-0.5 mb-3">
                   <p>แคลอรี่: {profile.daily_calories ?? '—'} kcal</p>
                   <p>โปรตีน: {profile.daily_protein_g ?? '—'} ก.</p>
                   <p>น้ำ: {(profile.daily_water_ml / 1000).toFixed(1)} ล./วัน</p>
                   {profile.ai_rationale && <p className="mt-1.5 italic">{profile.ai_rationale}</p>}
                 </div>
               ) : (
-                <p className="text-xs text-[#7C8394] mb-3">ยังไม่ตั้งเป้า</p>
+                <p className="text-xs text-[#8A8178] mb-3">ยังไม่ตั้งเป้า</p>
               )}
               <button onClick={calcTargets} disabled={calculating}
-                className="w-full py-2.5 rounded-lg bg-[#EDEAE0] text-[#14171F]
+                className="w-full py-2.5 rounded-lg bg-[#EDEAE0] text-[#171412]
                   text-sm font-semibold disabled:opacity-50">
                 {calculating ? 'กำลังคำนวณ...' : 'คำนวณเป้าใหม่'}
               </button>
@@ -470,12 +507,12 @@ export default function NutritionView({
             </div>
 
             {/* น้ำดื่ม */}
-            <div className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4 mb-4">
+            <div className="bg-[#201C19] border border-[#332D28] rounded-xl p-4 mb-4">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs text-[#7C8394] flex items-center gap-1.5">
+                <p className="text-xs text-[#8A8178] flex items-center gap-1.5">
                   <GlassWater size={13} /> น้ำดื่ม
                 </p>
-                <span className="text-xs tabular-nums text-[#7C8394]">
+                <span className="text-xs tabular-nums text-[#8A8178]">
                   {(currentMl / 1000).toFixed(2)}/{(targetMl / 1000).toFixed(2)} ล.
                   {overMl > 0 && (
                     <span className="text-[#4FC1E0] ml-1.5">เกินเป้า +{(overMl / 1000).toFixed(1)} ล.</span>
@@ -484,13 +521,13 @@ export default function NutritionView({
               </div>
               <ProgressBar value={currentMl} target={targetMl} className="mb-2" />
               {remainingHint && (
-                <p className="text-[10px] text-[#7C8394] mb-2">{remainingHint}</p>
+                <p className="text-[10px] text-[#8A8178] mb-2">{remainingHint}</p>
               )}
 
               <div className="flex flex-wrap gap-2 mb-2">
                 {containers.map(c => (
                   <button key={c.id} onClick={() => addWater(c.ml, c.name)}
-                    className="px-3 py-2 rounded-lg bg-[#14171F] border border-[#2A2F3D]
+                    className="px-3 py-2 rounded-lg bg-[#171412] border border-[#332D28]
                       text-xs font-semibold min-h-[40px]">
                     {c.name} +{c.ml}
                   </button>
@@ -499,17 +536,17 @@ export default function NutritionView({
 
               {!manualMlOpen ? (
                 <button onClick={() => setManualMlOpen(true)}
-                  className="text-xs text-[#7C8394] underline">+ กรอกเอง</button>
+                  className="text-xs text-[#8A8178] underline">+ กรอกเอง</button>
               ) : (
                 <div className="flex gap-2">
                   <input type="number" min="0" value={manualMl}
                     onChange={e => setManualMl(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && saveManualMl()}
                     placeholder="ml"
-                    className="flex-1 min-w-0 bg-[#14171F] border border-[#2A2F3D] rounded-lg
-                      px-3 py-1.5 text-sm outline-none focus:border-[#7C8394]" />
+                    className="flex-1 min-w-0 bg-[#171412] border border-[#332D28] rounded-lg
+                      px-3 py-1.5 text-sm outline-none focus:border-[#8A8178]" />
                   <button onClick={saveManualMl}
-                    className="px-3 rounded-lg bg-[#EDEAE0] text-[#14171F] text-xs font-semibold">
+                    className="px-3 rounded-lg bg-[#EDEAE0] text-[#171412] text-xs font-semibold">
                     เพิ่ม
                   </button>
                 </div>
@@ -518,7 +555,7 @@ export default function NutritionView({
               {allWaterEntries.length > 0 && (
                 <div className="mt-2 space-y-0.5">
                   {allWaterEntries.map(e => (
-                    <div key={e.id} className="flex items-center justify-between text-xs text-[#7C8394]">
+                    <div key={e.id} className="flex items-center justify-between text-xs text-[#8A8178]">
                       <span className="tabular-nums">
                         {fmtHHMM(e.created_at)} · {e.ml} ml{e.container ? ` (${e.container})` : ''}
                       </span>
@@ -533,40 +570,40 @@ export default function NutritionView({
               )}
 
               <button onClick={() => setContainerManageOpen(o => !o)}
-                className="text-xs text-[#7C8394] mt-2 underline">
+                className="text-xs text-[#8A8178] mt-2 underline">
                 {containerManageOpen ? 'ปิด' : 'จัดการภาชนะ'}
               </button>
 
               {containerManageOpen && (
-                <div className="mt-2 pt-2 border-t border-[#2A2F3D] space-y-2">
+                <div className="mt-2 pt-2 border-t border-[#332D28] space-y-2">
                   {containers.map(c => (
                     <div key={c.id} className="flex items-center gap-2">
                       <input defaultValue={c.name} placeholder="ชื่อภาชนะ..."
                         onBlur={e => e.target.value !== c.name && editContainer(c.id, 'name', e.target.value)}
-                        className="flex-1 min-w-0 bg-[#14171F] border border-[#2A2F3D] rounded-lg
-                          px-3 py-1.5 text-sm outline-none focus:border-[#7C8394]" />
+                        className="flex-1 min-w-0 bg-[#171412] border border-[#332D28] rounded-lg
+                          px-3 py-1.5 text-sm outline-none focus:border-[#8A8178]" />
                       <input defaultValue={c.ml} type="number" min="1" placeholder="ml"
                         onBlur={e => String(c.ml) !== e.target.value && editContainer(c.id, 'ml', e.target.value)}
-                        className="w-20 bg-[#14171F] border border-[#2A2F3D] rounded-lg
-                          px-2 py-1.5 text-xs outline-none focus:border-[#7C8394]" />
+                        className="w-20 bg-[#171412] border border-[#332D28] rounded-lg
+                          px-2 py-1.5 text-xs outline-none focus:border-[#8A8178]" />
                       <button onClick={() => removeContainer(c.id)}
-                        className="text-[#7C8394] p-1"><X size={14} /></button>
+                        className="text-[#8A8178] p-1"><X size={14} /></button>
                     </div>
                   ))}
                   <div className="flex items-center gap-2">
                     <input value={newContainer.name} placeholder="เพิ่มภาชนะใหม่..."
                       onChange={e => setNewContainer(p => ({ ...p, name: e.target.value }))}
-                      className="flex-1 min-w-0 bg-transparent border border-dashed border-[#2A2F3D]
+                      className="flex-1 min-w-0 bg-transparent border border-dashed border-[#332D28]
                         rounded-lg px-3 py-1.5 text-sm outline-none
-                        focus:border-[#7C8394] placeholder:text-[#7C8394]" />
+                        focus:border-[#8A8178] placeholder:text-[#8A8178]" />
                     <input value={newContainer.ml} type="number" min="1" placeholder="ml"
                       onChange={e => setNewContainer(p => ({ ...p, ml: e.target.value }))}
                       onKeyDown={e => e.key === 'Enter' && addContainer()}
-                      className="w-20 bg-transparent border border-dashed border-[#2A2F3D]
+                      className="w-20 bg-transparent border border-dashed border-[#332D28]
                         rounded-lg px-3 py-1.5 text-xs outline-none
-                        focus:border-[#7C8394] placeholder:text-[#7C8394]" />
+                        focus:border-[#8A8178] placeholder:text-[#8A8178]" />
                     <button onClick={addContainer}
-                      className="text-[#7C8394] p-1"><Plus size={14} /></button>
+                      className="text-[#8A8178] p-1"><Plus size={14} /></button>
                   </div>
                 </div>
               )}
@@ -574,9 +611,9 @@ export default function NutritionView({
 
             {/* IF timer */}
             {ifSettings && (
-              <div className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4 mb-4">
+              <div className="bg-[#201C19] border border-[#332D28] rounded-xl p-4 mb-4">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs text-[#7C8394]">Intermittent Fasting</p>
+                  <p className="text-xs text-[#8A8178]">Intermittent Fasting</p>
                   <Toggle checked={ifSettings.enabled} onChange={() => setIfEnabled(!ifSettings.enabled)} />
                 </div>
 
@@ -590,13 +627,13 @@ export default function NutritionView({
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-xs text-[#7C8394] block mb-1">เริ่มกินได้</label>
+                    <label className="text-xs text-[#8A8178] block mb-1">เริ่มกินได้</label>
                     <input type="time" defaultValue={ifSettings.eat_start.slice(0, 5)}
                       onBlur={e => setIfTime('eat_start', e.target.value)}
                       className={`w-full ${inputCls}`} />
                   </div>
                   <div>
-                    <label className="text-xs text-[#7C8394] block mb-1">หยุดกิน</label>
+                    <label className="text-xs text-[#8A8178] block mb-1">หยุดกิน</label>
                     <input type="time" defaultValue={ifSettings.eat_end.slice(0, 5)}
                       onBlur={e => setIfTime('eat_end', e.target.value)}
                       className={`w-full ${inputCls}`} />

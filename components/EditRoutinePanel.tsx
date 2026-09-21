@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 // แผงแก้ไข routine: เปลี่ยนชื่อ, ตั้งเป้า, จัดการ checklist items, ลบ
 import { createClient } from '@/lib/supabase/client'
@@ -87,50 +87,50 @@ export default function EditRoutinePanel({ routine, kind, today, projects, onClo
   const todayOverride = routine.daily_targets.find(t => t.date === today)
 
   return (
-    <div className="mt-3 border-t border-[#2A2F3D] pt-3 space-y-3">
+    <div className="mt-3 border-t border-[#332D28] pt-3 space-y-3">
 
       <div>
-        <label className="text-xs text-[#7C8394] block mb-1">ชื่อ routine</label>
+        <label className="text-xs text-[#8A8178] block mb-1">ชื่อ routine</label>
         <input defaultValue={routine.name}
           onBlur={(e) => rename(e.target.value)}
-          className="w-full bg-[#14171F] border border-[#2A2F3D] rounded-lg
-            px-3 py-1.5 text-sm outline-none focus:border-[#7C8394]" />
+          className="w-full bg-[#171412] border border-[#332D28] rounded-lg
+            px-3 py-1.5 text-sm outline-none focus:border-[#8A8178]" />
       </div>
 
       {kind === 'timed' && (
         <div className="flex gap-3">
           <div className="flex-1">
-            <label className="text-xs text-[#7C8394] block mb-1">
+            <label className="text-xs text-[#8A8178] block mb-1">
               เป้าประจำ (นาที/วัน)
             </label>
             <input type="number" min="0"
               defaultValue={routine.default_target_minutes ?? ''}
               placeholder="ไม่ตั้ง"
               onBlur={(e) => setDefaultTarget(e.target.value)}
-              className="w-full bg-[#14171F] border border-[#2A2F3D] rounded-lg
-                px-3 py-1.5 text-sm outline-none focus:border-[#7C8394]" />
+              className="w-full bg-[#171412] border border-[#332D28] rounded-lg
+                px-3 py-1.5 text-sm outline-none focus:border-[#8A8178]" />
           </div>
           <div className="flex-1">
-            <label className="text-xs text-[#7C8394] block mb-1">
+            <label className="text-xs text-[#8A8178] block mb-1">
               เฉพาะวันนี้ (override)
             </label>
             <input type="number" min="0"
               defaultValue={todayOverride?.target_minutes ?? ''}
               placeholder="ใช้เป้าประจำ"
               onBlur={(e) => setTodayOverride(e.target.value)}
-              className="w-full bg-[#14171F] border border-[#2A2F3D] rounded-lg
-                px-3 py-1.5 text-sm outline-none focus:border-[#7C8394]" />
+              className="w-full bg-[#171412] border border-[#332D28] rounded-lg
+                px-3 py-1.5 text-sm outline-none focus:border-[#8A8178]" />
           </div>
         </div>
       )}
 
       {kind === 'timed' && (
         <div>
-          <label className="text-xs text-[#7C8394] block mb-1">ผูกกับโปรเจกต์</label>
+          <label className="text-xs text-[#8A8178] block mb-1">ผูกกับโปรเจกต์</label>
           <select defaultValue={routine.project_id ?? ''}
             onChange={(e) => setProject(e.target.value)}
-            className="w-full bg-[#14171F] border border-[#2A2F3D] rounded-lg
-              px-3 py-1.5 text-sm outline-none focus:border-[#7C8394]">
+            className="w-full bg-[#171412] border border-[#332D28] rounded-lg
+              px-3 py-1.5 text-sm outline-none focus:border-[#8A8178]">
             <option value="">ไม่ผูก</option>
             {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
@@ -140,9 +140,9 @@ export default function EditRoutinePanel({ routine, kind, today, projects, onClo
       {kind === 'checklist' && (
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="text-xs text-[#7C8394]">รายการย่อย</label>
+            <label className="text-xs text-[#8A8178]">รายการย่อย</label>
             <button onClick={addItem}
-              className="flex items-center gap-1 text-xs text-[#7C8394]">
+              className="flex items-center gap-1 text-xs text-[#8A8178]">
               <Plus size={12} /> เพิ่ม
             </button>
           </div>
@@ -151,15 +151,15 @@ export default function EditRoutinePanel({ routine, kind, today, projects, onClo
               <input defaultValue={item.name} placeholder="ชื่อท่า/รายการ..."
                 onBlur={(e) => e.target.value !== item.name &&
                   editItem(item.id, 'name', e.target.value)}
-                className="flex-1 bg-[#14171F] border border-[#2A2F3D] rounded-lg
-                  px-3 py-1.5 text-sm outline-none focus:border-[#7C8394]" />
+                className="flex-1 bg-[#171412] border border-[#332D28] rounded-lg
+                  px-3 py-1.5 text-sm outline-none focus:border-[#8A8178]" />
               <input defaultValue={item.detail ?? ''} placeholder="เช่น 3x15"
                 onBlur={(e) => e.target.value !== (item.detail ?? '') &&
                   editItem(item.id, 'detail', e.target.value)}
-                className="w-24 bg-[#14171F] border border-[#2A2F3D] rounded-lg
-                  px-3 py-1.5 text-xs outline-none focus:border-[#7C8394]" />
+                className="w-24 bg-[#171412] border border-[#332D28] rounded-lg
+                  px-3 py-1.5 text-xs outline-none focus:border-[#8A8178]" />
               <button onClick={() => removeItem(item.id)}
-                className="text-[#7C8394] p-1"><X size={14} /></button>
+                className="text-[#8A8178] p-1"><X size={14} /></button>
             </div>
           ))}
         </div>
@@ -167,19 +167,19 @@ export default function EditRoutinePanel({ routine, kind, today, projects, onClo
 
       <div>
         <div className="flex items-center justify-between mb-1">
-          <label className="text-xs text-[#7C8394]">เวลาเตือน</label>
+          <label className="text-xs text-[#8A8178]">เวลาเตือน</label>
           <Toggle checked={routine.remind_enabled} onChange={toggleRemindEnabled} />
         </div>
         <input type="time" defaultValue={routine.remind_at?.slice(0, 5) ?? ''}
           onBlur={(e) => setRemindAt(e.target.value)}
-          className="w-full bg-[#14171F] border border-[#2A2F3D] rounded-lg
-            px-3 py-1.5 text-sm outline-none focus:border-[#7C8394]" />
+          className="w-full bg-[#171412] border border-[#332D28] rounded-lg
+            px-3 py-1.5 text-sm outline-none focus:border-[#8A8178]" />
         <div className="flex gap-1 mt-2">
           {DAY_LABELS.map((label, i) => (
             <button key={i} onClick={() => toggleRemindDay(i)}
               className={`flex-1 py-1.5 rounded-md text-[10px] font-semibold transition-colors
                 ${(routine.remind_days ?? []).includes(i)
-                  ? 'bg-[#4FC1E0] text-[#14171F]' : 'border border-[#2A2F3D] text-[#7C8394]'}`}>
+                  ? 'bg-[#4FC1E0] text-[#171412]' : 'border border-[#332D28] text-[#8A8178]'}`}>
               {label}
             </button>
           ))}
@@ -191,7 +191,7 @@ export default function EditRoutinePanel({ routine, kind, today, projects, onClo
           className="flex items-center gap-1.5 text-xs text-[#E4574A]">
           <Trash2 size={13} /> ลบ routine นี้
         </button>
-        <button onClick={onClose} className="text-xs text-[#7C8394]">ปิด</button>
+        <button onClick={onClose} className="text-xs text-[#8A8178]">ปิด</button>
       </div>
     </div>
   )

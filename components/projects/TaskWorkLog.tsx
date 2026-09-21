@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 // จับเวลาทำงานต่อ task: ▶ เริ่ม/■ หยุด (นาฬิกาเดินสดระหว่างจับ) + ทางเลือกกรอกนาทีเองสำหรับ backfill
 // รันได้ log เดียวต่อ task พร้อมกัน (running = log ล่าสุดที่มี clock_in แต่ยังไม่มี clock_out)
@@ -90,14 +90,14 @@ export default function TaskWorkLog({ taskId, workLogs }: Props) {
         </button>
       ) : (
         <button onClick={start} disabled={busy}
-          className="flex items-center gap-1 text-[10px] text-[#7C8394] p-1 disabled:opacity-50">
+          className="flex items-center gap-1 text-[10px] text-[#8A8178] p-1 disabled:opacity-50">
           <Play size={11} /> เริ่มจับเวลา
         </button>
       )}
 
       {!manualOpen ? (
         <button onClick={() => setManualOpen(true)}
-          className="flex items-center gap-1 text-[10px] text-[#7C8394] p-1">
+          className="flex items-center gap-1 text-[10px] text-[#8A8178] p-1">
           <Clock size={11} /> กรอกเวลาเอง
         </button>
       ) : (
@@ -105,13 +105,13 @@ export default function TaskWorkLog({ taskId, workLogs }: Props) {
           <input type="number" min={1} autoFocus value={minutes} placeholder="นาที"
             onChange={e => setMinutes(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && saveManual()}
-            className="w-14 bg-[#14171F] border border-[#2A2F3D] rounded-lg px-1.5 py-1 text-xs outline-none" />
+            className="w-14 bg-[#171412] border border-[#332D28] rounded-lg px-1.5 py-1 text-xs outline-none" />
           <input value={note} placeholder="โน้ต (ไม่บังคับ)"
             onChange={e => setNote(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && saveManual()}
-            className="w-24 bg-[#14171F] border border-[#2A2F3D] rounded-lg px-1.5 py-1 text-xs outline-none" />
+            className="w-24 bg-[#171412] border border-[#332D28] rounded-lg px-1.5 py-1 text-xs outline-none" />
           <button onClick={saveManual} className="text-[10px] text-[#4FC1E0] px-1">บันทึก</button>
-          <button onClick={() => setManualOpen(false)} className="text-[10px] text-[#7C8394] px-1">ยกเลิก</button>
+          <button onClick={() => setManualOpen(false)} className="text-[10px] text-[#8A8178] px-1">ยกเลิก</button>
         </div>
       )}
     </div>

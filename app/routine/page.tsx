@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+﻿import { createClient } from '@/lib/supabase/server'
 import { CategoryWithRoutines } from '@/lib/supabase/types'
 import TodayView from '@/components/TodayView'
 import RealtimeRefresher from '@/components/RealtimeRefresher'
@@ -31,7 +31,7 @@ export default async function RoutinePage() {
 
   if (error) {
     return (
-      <main className="min-h-screen bg-[#14171F] flex items-center justify-center">
+      <main className="min-h-screen bg-[#171412] flex items-center justify-center">
         <p className="text-[#E4574A] text-sm">โหลดข้อมูลไม่สำเร็จ: {error.message}</p>
       </main>
     )

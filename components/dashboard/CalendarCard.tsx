@@ -228,32 +228,48 @@ export default async function CalendarCard({ title }: Props) {
   })
 
   // ---- cell renderer ----
+  // wrapper div (relative inline-flex) ทำหน้าที่เป็น positioning context ของ badge
+  // badge วางที่ -top-1 -right-1 = นอกขอบ circle เสมอ ไม่ทับตัวเลข
   function CalCell({ cell, compact = false }: { cell: CalCell; compact?: boolean }) {
-    const base = compact ? 'w-7 h-7 text-xs' : 'w-8 h-8 text-[13px]'
+    const size = compact ? 'w-7 h-7 text-xs' : 'w-8 h-8 text-[13px]'
+
     if (cell.isToday) {
       return (
-        <div className={`${base} flex flex-col items-center justify-center rounded-full
-          bg-[#4FC1E0] text-[#14171F] font-semibold font-mono leading-none relative`}>
-          {cell.day}
+        // wrapper: relative บาง — ให้ badge วางข้างนอก circle ได้โดยไม่ disrupt grid
+        <div className="relative inline-flex">
+          <div className={`${size} flex items-center justify-center rounded-full
+            bg-[#4FC1E0] text-[#171412] font-semibold font-mono leading-none`}>
+            {cell.day}
+          </div>
           {cell.hasEvent && (
-            <span className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-[#14171F] opacity-70" />
+            // badge นอก cyan circle — ใช้ page-bg + cyan ring เพื่อ contrast ชัดบน cyan fill
+            <span className="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full
+              bg-[#171412] ring-1 ring-[#4FC1E0]" />
           )}
         </div>
       )
     }
-    const textColor = !cell.isCurrentMonth
-      ? 'text-[#3A3F50]'
-      : 'text-[#EDEAE0]'
+
+    // adjacent-month dates — ยัง dim ข้อความ แต่ถ้ามี event ก็แสดง badge (dimmed)
+    const textColor = !cell.isCurrentMonth ? 'text-[#4A4440]' : 'text-[#EDEAE0]'
+    // badge opacity: current-month = 0.8, adjacent = 0.35 (visible แต่ไม่แย่งซีน)
+    const badgeOpacity = cell.isCurrentMonth ? 'opacity-80' : 'opacity-35'
+
     return (
-      <div className={`${base} flex flex-col items-center justify-center rounded-full
-        font-mono leading-none relative ${textColor}`}>
-        {cell.day}
-        {cell.hasEvent && cell.isCurrentMonth && (
-          <span className="absolute bottom-0.5 w-1 h-1 rounded-full bg-[#4FC1E0] opacity-60" />
+      <div className="relative inline-flex">
+        <div className={`${size} flex items-center justify-center rounded-full
+          font-mono leading-none ${textColor}`}>
+          {cell.day}
+        </div>
+        {cell.hasEvent && (
+          // badge นอก circle — cyan accent, opacity บอก current vs adjacent month
+          <span className={`absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full
+            bg-[#4FC1E0] ${badgeOpacity}`} />
         )}
       </div>
     )
   }
+
 
   function GridRows({ rows, compact = false }: { rows: CalCell[][]; compact?: boolean }) {
     return (
@@ -276,7 +292,7 @@ export default async function CalendarCard({ title }: Props) {
   // BentoCalendarCard เหลือแค่ wrapper สำหรับ grid-span + Suspense ไม่มี visual styling
   return (
     <Link href="/calendar" prefetch={false}
-      className="flex flex-col bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl
+      className="flex flex-col bg-[#201C19] border border-[#332D28] rounded-xl
         hover:border-[#4FC1E0]/40 transition-colors group h-full min-h-[200px]
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4FC1E0]/50">
 
@@ -293,20 +309,20 @@ export default async function CalendarCard({ title }: Props) {
               {todayWeekdayTh}
             </span>
             {/* ชื่อเดือน */}
-            <span className="text-xs text-[#7C8394] leading-tight mt-0.5">
+            <span className="text-xs text-[#8A8178] leading-tight mt-0.5">
               {monthNameTh}
             </span>
           </div>
         </div>
         {/* ลูกศรไปหน้าปฏิทิน */}
-        <svg className="w-4 h-4 text-[#3A3F50] group-hover:text-[#7C8394] transition-colors flex-shrink-0 mt-1"
+        <svg className="w-4 h-4 text-[#4A4440] group-hover:text-[#8A8178] transition-colors flex-shrink-0 mt-1"
           fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M7 17L17 7M17 7H7M17 7v10" />
         </svg>
       </div>
 
       {/* accent bar บาง — calendar accent #4FC1E0 */}
-      <div className="mx-4 h-[1px] bg-[#2A2F3D] mb-3" />
+      <div className="mx-4 h-[1px] bg-[#332D28] mb-3" />
 
       {/* ── Calendar content (ซ่อน/แสดงตาม breakpoint) ──── */}
 
@@ -317,7 +333,7 @@ export default async function CalendarCard({ title }: Props) {
             {/* day-of-week headers */}
             <div className="grid grid-cols-7 gap-0 mb-1">
               {DAY_HEADERS.map(h => (
-                <div key={h} className="text-center text-[10px] text-[#3A3F50] tracking-[0.04em] py-1">
+                <div key={h} className="text-center text-[10px] text-[#8A8178] tracking-[0.04em] py-1">
                   {h}
                 </div>
               ))}
@@ -329,7 +345,7 @@ export default async function CalendarCard({ title }: Props) {
           <div className="block md:hidden px-3 pb-1">
             <div className="grid grid-cols-7 gap-0 mb-1">
               {DAY_HEADERS.map(h => (
-                <div key={h} className="text-center text-[10px] text-[#3A3F50] tracking-[0.04em] py-1">
+                <div key={h} className="text-center text-[10px] text-[#8A8178] tracking-[0.04em] py-1">
                   {h}
                 </div>
               ))}
@@ -341,7 +357,7 @@ export default async function CalendarCard({ title }: Props) {
         /* not connected / error state — ยังแสดง state เดิม แต่ใต้ header ใหม่ */
         <div className="px-4 pb-4 flex-1 flex items-center">
           {!connected && (
-            <p className="text-sm text-[#7C8394]">เชื่อม Google Calendar</p>
+            <p className="text-sm text-[#8A8178]">เชื่อม Google Calendar</p>
           )}
           {connected && errored && (
             <p className="text-sm text-[#E4574A]">ดึงข้อมูลไม่สำเร็จ</p>
@@ -352,17 +368,17 @@ export default async function CalendarCard({ title }: Props) {
       {/* ── Upcoming events ─────────────────────────── */}
       {connected && !errored && (
         <>
-          <div className="mx-4 h-[1px] bg-[#2A2F3D] mt-1 mb-2" />
+          <div className="mx-4 h-[1px] bg-[#332D28] mt-1 mb-2" />
           <div className="px-4 pb-4 space-y-1.5 flex-shrink-0">
             {upcoming.length === 0 ? (
-              <p className="text-xs text-[#3A3F50]">ไม่มีนัดหมายเร็วๆ นี้</p>
+              <p className="text-xs text-[#4A4440]">ไม่มีนัดหมายเร็วๆ นี้</p>
             ) : (
               upcoming.map(e => (
                 <div key={e.id} className="flex items-baseline gap-1.5 min-w-0">
                   {/* dot indicator */}
                   <span className="w-1 h-1 rounded-full bg-[#4FC1E0] opacity-70 flex-shrink-0 mt-[5px]" />
                   {/* datetime */}
-                  <span className="font-mono text-[11px] text-[#7C8394] flex-shrink-0">
+                  <span className="font-mono text-[11px] text-[#8A8178] flex-shrink-0">
                     {fmtUpcoming(e)}
                   </span>
                   {/* title */}

@@ -24,6 +24,7 @@ export default async function Dashboard() {
   const [
     modulesRes, categoriesRes, weekEntriesRes, foodRes, waterRes, ifRes, profileRes, healthRes,
     latestWeightRes, weightWindowRes, containersRes, appSettingsRes, workoutDayRes, workoutSessionRes,
+    morningWalkRes,
   ] = await Promise.all([
     supabase.from('modules').select('*').eq('enabled', true).order('sort_order'),
     supabase.from('routine_categories').select(`
@@ -50,6 +51,8 @@ export default async function Dashboard() {
     // (เช่นเริ่มใหม่หลังกด "จบตอนนี้" ไปแล้ว) เอาแถวล่าสุดพอ
     supabase.from('workout_sessions').select('completed_at, active_minutes')
       .eq('date', today).order('started_at', { ascending: false }).limit(1).maybeSingle(),
+    supabase.from('morning_walk_checks').select('strava_confirmed, manual_override')
+      .eq('date', today).maybeSingle(),
   ])
 
   const modules = (modulesRes.data ?? []) as Module[]
@@ -120,7 +123,7 @@ export default async function Dashboard() {
     <>
       <AppNav />
       <RealtimeRefresher />
-      <main className="min-h-screen bg-[#14171F] text-[#EDEAE0] pb-16">
+      <main className="min-h-screen bg-[#171412] text-[#EDEAE0] pb-16">
         <Hero
           today={today}
           todayLabel={todayLabel}
@@ -150,10 +153,10 @@ export default async function Dashboard() {
         {/* layout pass: สร้าง Bento composition ตาม design.md hierarchy (calendar ใหญ่สุด, routine เล็กสุด) */}
         {/* desktop: 4-col grid / tablet: 2-col / mobile: 1-col — ดูรายละเอียดแต่ละ breakpoint ด้านล่าง */}
         <div className="max-w-5xl mx-auto px-4">
-          <p className="text-[11px] text-[#7C8394] tracking-[0.05em] uppercase mb-3">โมดูล</p>
+          <p className="text-[11px] text-[#8A8178] tracking-[0.05em] uppercase mb-3">โมดูล</p>
 
           {modules.length === 0 && (
-            <p className="text-sm text-[#7C8394] py-4">
+            <p className="text-sm text-[#8A8178] py-4">
               ยังไม่มีโมดูลเปิดใช้งาน — ไปเปิดที่ <Link href="/settings" className="underline">ตั้งค่า</Link>
             </p>
           )}
@@ -174,6 +177,7 @@ export default async function Dashboard() {
             const wDay = workoutDayRes.data
             const wSession = workoutSessionRes.data
             const isRest = !wDay || wDay.kind === 'rest'
+            const walkedToday = !!(morningWalkRes.data?.strava_confirmed || morningWalkRes.data?.manual_override)
             const weighedToday = (weightWindowRes.data ?? []).some(w => w.date === today && w.weight_kg != null)
             const showWater = !(proteinGapVal !== null && proteinGapVal > 0)
             const nutritSecondary = showWater
@@ -224,9 +228,9 @@ export default async function Dashboard() {
                         <span className="font-mono text-2xl font-semibold">
                           {Math.round(caloriesEaten)}
                         </span>
-                        <span className="text-xs text-[#7C8394]">kcal</span>
+                        <span className="text-xs text-[#8A8178]">kcal</span>
                       </div>
-                      <p className="text-xs text-[#7C8394] mt-1">{nutritSecondary}</p>
+                      <p className="text-xs text-[#8A8178] mt-1">{nutritSecondary}</p>
                     </ModuleCard>
                   )}
 
@@ -243,19 +247,19 @@ export default async function Dashboard() {
                           <span className="font-mono text-2xl font-semibold">
                             {weighedToday && latestWeight != null ? latestWeight.toFixed(1) : '—'}
                           </span>
-                          <span className="text-xs text-[#7C8394] ml-1">กก.</span>
+                          <span className="text-xs text-[#8A8178] ml-1">กก.</span>
                         </div>
                         {stepsToday != null && (
-                          <div className="border-l border-[#2A2F3D] pl-3">
+                          <div className="border-l border-[#332D28] pl-3">
                             <span className="font-mono text-lg font-semibold">
                               {stepsToday.toLocaleString()}
                             </span>
-                            <span className="text-xs text-[#7C8394] ml-1">ก้าว</span>
+                            <span className="text-xs text-[#8A8178] ml-1">ก้าว</span>
                           </div>
                         )}
                       </div>
                       {!weighedToday && (
-                        <p className="text-xs text-[#7C8394] mt-1">ยังไม่ชั่งวันนี้</p>
+                        <p className="text-xs text-[#8A8178] mt-1">ยังไม่ชั่งวันนี้</p>
                       )}
                     </ModuleCard>
                   )}
@@ -279,7 +283,7 @@ export default async function Dashboard() {
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <span className="text-sm font-medium">{wDay?.label ?? '—'}</span>
                         {isRest ? (
-                          <span className="text-xs text-[#7C8394]">วันพัก</span>
+                          <span className="text-xs text-[#8A8178]">วันพัก</span>
                         ) : wSession?.completed_at ? (
                           <span className="text-xs text-[#4FC1E0]">
                             เล่นแล้ว <span className="font-mono">{wSession.active_minutes ?? '?'}</span> นาที ✓
@@ -287,9 +291,14 @@ export default async function Dashboard() {
                         ) : wSession ? (
                           <span className="text-xs text-[#F0A345]">เล่นค้างไว้</span>
                         ) : (
-                          <span className="text-xs text-[#7C8394]">ยังไม่ได้เล่น</span>
+                          <span className="text-xs text-[#8A8178]">ยังไม่ได้เล่น</span>
                         )}
                       </div>
+                      {/* เดินเช้า — ยืนยันผ่าน Strava/เองแยกจากสถานะเวิร์กเอาต์เย็นด้านบน (การ์ดทั้งใบลิงก์ไป
+                          /workout อยู่แล้ว เลยใช้แค่ข้อความบอกสถานะ ไม่ใส่ <Link> ซ้อนใน <Link> ของ ModuleCard) */}
+                      <p className={`text-xs mt-2 ${walkedToday ? 'text-[#4FC1E0]' : 'text-[#8A8178]'}`}>
+                        {walkedToday ? '✓ เดินเช้าแล้ว' : 'ยังไม่เช็คเดินเช้า'}
+                      </p>
                     </ModuleCard>
                   )}
                 </div>
@@ -306,7 +315,7 @@ export default async function Dashboard() {
                         <span className="font-mono text-xl font-semibold">
                           {(weekMins / 60).toFixed(1)}
                         </span>
-                        <span className="text-xs text-[#7C8394]">ชม. สัปดาห์นี้</span>
+                        <span className="text-xs text-[#8A8178]">ชม. สัปดาห์นี้</span>
                       </div>
                     </ModuleCard>
                   )}
@@ -322,9 +331,9 @@ export default async function Dashboard() {
                         <span className="font-mono text-xl font-semibold">
                           {checklistDone}/{checklistTotal}
                         </span>
-                        <span className="text-xs text-[#7C8394]">เช็คลิสต์</span>
+                        <span className="text-xs text-[#8A8178]">เช็คลิสต์</span>
                         {trackedMins > 0 && (
-                          <span className="text-xs text-[#7C8394]">
+                          <span className="text-xs text-[#8A8178]">
                             · <span className="font-mono">{(trackedMins / 60).toFixed(1)}</span> ชม.
                           </span>
                         )}
@@ -338,9 +347,9 @@ export default async function Dashboard() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {unknownModules.map(m => (
                       <div key={m.key}
-                        className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4 opacity-40">
-                        <p className="text-[11px] text-[#7C8394] tracking-[0.05em] uppercase">{moduleLabel(m)}</p>
-                        <p className="text-xs text-[#7C8394] mt-1">เร็วๆ นี้</p>
+                        className="bg-[#201C19] border border-[#332D28] rounded-xl p-4 opacity-40">
+                        <p className="text-[11px] text-[#8A8178] tracking-[0.05em] uppercase">{moduleLabel(m)}</p>
+                        <p className="text-xs text-[#8A8178] mt-1">เร็วๆ นี้</p>
                       </div>
                     ))}
                   </div>

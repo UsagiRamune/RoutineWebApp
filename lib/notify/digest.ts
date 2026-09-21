@@ -1,4 +1,4 @@
-// สร้าง body HTML ของสรุปเช้า: เมื่อวานในสายตาเดียว + แผนวันนี้
+﻿// สร้าง body HTML ของสรุปเช้า: เมื่อวานในสายตาเดียว + แผนวันนี้
 import { dateKeyOffset, TZ } from '@/lib/dates'
 import { calendarFor } from '@/lib/google/calendar'
 import { escapeHtml } from './template'
@@ -102,7 +102,7 @@ export async function buildMorningDigestBody(
     <h2 style="margin:16px 0 8px;font-size:16px;color:#EDEAE0;">แผนวันนี้</h2>
     ${remindersToday.length > 0
       ? `<p style="margin:0 0 4px;">${remindersToday.map(r => escapeHtml(`${r.time} — ${r.name}`)).join('<br>')}</p>`
-      : '<p style="margin:0 0 4px;color:#7C8394;">ไม่มี routine ตั้งเวลาเตือนวันนี้</p>'}
+      : '<p style="margin:0 0 4px;color:#8A8178;">ไม่มี routine ตั้งเวลาเตือนวันนี้</p>'}
     ${calendarLines.length > 0
       ? `<p style="margin:8px 0 4px;">${calendarLines.map(escapeHtml).join('<br>')}</p>` : ''}
     ${ifSettings?.enabled

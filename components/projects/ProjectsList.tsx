@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 // หน้ารายการโปรเจกต์: การ์ดต่อโปรเจกต์ (active/paused โชว์เสมอ, done/archived ยุบไว้) + ฟอร์มเพิ่มโปรเจกต์
 import { useState } from 'react'
@@ -27,8 +27,8 @@ function ProjectCard({ project, today }: { project: ProjectWithFields; today: st
 
   return (
     <Link href={`/projects/${project.id}`}
-      className="block bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4 mb-3
-        hover:border-[#7C8394] transition-colors">
+      className="block bg-[#201C19] border border-[#332D28] rounded-xl p-4 mb-3
+        hover:border-[#8A8178] transition-colors">
       <div className="flex items-center justify-between mb-2 gap-2">
         <p className="font-medium text-sm truncate">{project.name}</p>
         <span className="text-[10px] px-2 py-0.5 rounded-full flex-shrink-0"
@@ -39,17 +39,17 @@ function ProjectCard({ project, today }: { project: ProjectWithFields; today: st
 
       {progress.total > 0 ? (
         <>
-          <div className="h-1.5 bg-[#14171F] rounded-full overflow-hidden mb-1">
+          <div className="h-1.5 bg-[#171412] rounded-full overflow-hidden mb-1">
             <div className="h-full rounded-full bg-[#4FC1E0]" style={{ width: `${pct}%` }} />
           </div>
-          <p className="text-xs text-[#7C8394]">{progress.done}/{progress.total} task ({pct}%)</p>
+          <p className="text-xs text-[#8A8178]">{progress.done}/{progress.total} task ({pct}%)</p>
         </>
       ) : (
-        <p className="text-xs text-[#7C8394]">ยังไม่มี task</p>
+        <p className="text-xs text-[#8A8178]">ยังไม่มี task</p>
       )}
 
       {days !== null && (
-        <p className={`text-xs mt-1 ${days < 0 ? 'text-[#E4574A]' : 'text-[#7C8394]'}`}>
+        <p className={`text-xs mt-1 ${days < 0 ? 'text-[#E4574A]' : 'text-[#8A8178]'}`}>
           {days < 0 ? `เกินกำหนด ${-days} วัน` : days === 0 ? 'ครบกำหนดวันนี้' : `เหลือ ${days} วัน`}
         </p>
       )}
@@ -83,7 +83,7 @@ export default function ProjectsList({ projects, today }: Props) {
   return (
     <div>
       {visible.length === 0 && archived.length === 0 && (
-        <p className="text-sm text-[#7C8394] mb-4">ยังไม่มีโปรเจกต์ เริ่มสร้างโปรเจกต์แรกได้เลย</p>
+        <p className="text-sm text-[#8A8178] mb-4">ยังไม่มีโปรเจกต์ เริ่มสร้างโปรเจกต์แรกได้เลย</p>
       )}
 
       {visible.map(p => <ProjectCard key={p.id} project={p} today={today} />)}
@@ -91,7 +91,7 @@ export default function ProjectsList({ projects, today }: Props) {
       {archived.length > 0 && (
         <div className="mb-3">
           <button onClick={() => setShowArchived(v => !v)}
-            className="flex items-center gap-1 text-xs text-[#7C8394] mb-2">
+            className="flex items-center gap-1 text-xs text-[#8A8178] mb-2">
             {showArchived ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
             {showArchived ? 'ซ่อน' : 'แสดง'}เสร็จแล้ว/เก็บถาวร ({archived.length})
           </button>
@@ -100,29 +100,29 @@ export default function ProjectsList({ projects, today }: Props) {
       )}
 
       {showAdd ? (
-        <div className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4 space-y-3">
+        <div className="bg-[#201C19] border border-[#332D28] rounded-xl p-4 space-y-3">
           <input value={form.name} placeholder="ชื่อโปรเจกต์..."
             onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-            className="w-full bg-[#14171F] border border-[#2A2F3D] rounded-lg
-              px-3 py-2 text-sm outline-none focus:border-[#7C8394]" />
+            className="w-full bg-[#171412] border border-[#332D28] rounded-lg
+              px-3 py-2 text-sm outline-none focus:border-[#8A8178]" />
           <div className="flex items-center justify-between">
-            <label className="text-xs text-[#7C8394]">ทำเดี่ยว (solo)</label>
+            <label className="text-xs text-[#8A8178]">ทำเดี่ยว (solo)</label>
             <Toggle checked={form.isSolo} onChange={() => setForm(p => ({ ...p, isSolo: !p.isSolo }))} />
           </div>
           <div>
-            <label className="text-xs text-[#7C8394] block mb-1">กำหนดเสร็จ (ไม่บังคับ)</label>
+            <label className="text-xs text-[#8A8178] block mb-1">กำหนดเสร็จ (ไม่บังคับ)</label>
             <input type="date" value={form.targetDate}
               onChange={e => setForm(p => ({ ...p, targetDate: e.target.value }))}
-              className="w-full bg-[#14171F] border border-[#2A2F3D] rounded-lg
-                px-3 py-2 text-sm outline-none focus:border-[#7C8394]" />
+              className="w-full bg-[#171412] border border-[#332D28] rounded-lg
+                px-3 py-2 text-sm outline-none focus:border-[#8A8178]" />
           </div>
           <div className="flex gap-2">
             <button onClick={addProject}
-              className="flex-1 py-2 rounded-lg bg-[#EDEAE0] text-[#14171F] text-sm font-semibold">
+              className="flex-1 py-2 rounded-lg bg-[#EDEAE0] text-[#171412] text-sm font-semibold">
               บันทึก
             </button>
             <button onClick={() => setShowAdd(false)}
-              className="px-4 py-2 rounded-lg border border-[#2A2F3D] text-sm text-[#7C8394]">
+              className="px-4 py-2 rounded-lg border border-[#332D28] text-sm text-[#8A8178]">
               ยกเลิก
             </button>
           </div>
@@ -130,7 +130,7 @@ export default function ProjectsList({ projects, today }: Props) {
       ) : (
         <button onClick={() => setShowAdd(true)}
           className="w-full flex items-center justify-center gap-1.5 border border-dashed
-            border-[#2A2F3D] rounded-xl px-4 py-3 text-sm text-[#7C8394]">
+            border-[#332D28] rounded-xl px-4 py-3 text-sm text-[#8A8178]">
           <Plus size={14} /> เพิ่มโปรเจกต์
         </button>
       )}

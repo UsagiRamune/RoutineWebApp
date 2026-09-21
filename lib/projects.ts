@@ -1,4 +1,4 @@
-// คำนวณ progress ของโปรเจกต์ (done/total task จากทุก field) — ใช้ร่วมกันทั้งหน้า list, detail,
+﻿// คำนวณ progress ของโปรเจกต์ (done/total task จากทุก field) — ใช้ร่วมกันทั้งหน้า list, detail,
 // dashboard card, และ analyze prompt กันตรรกะเพี้ยนไม่ตรงกันระหว่างจุดที่ต่างกัน
 export interface ProgressCount {
   done: number
@@ -28,7 +28,7 @@ export const STATUS_LABEL: Record<string, string> = {
 }
 
 export const STATUS_COLOR: Record<string, string> = {
-  active: '#4FC1E0', paused: '#F0A345', done: '#6FCF97', archived: '#7C8394',
+  active: '#4FC1E0', paused: '#F0A345', done: '#6FCF97', archived: '#8A8178',
 }
 
 // นาที → "N ชม. M นาที" — รูปแบบเดียวกับที่ TodayView ใช้กับเวลาจับ routine

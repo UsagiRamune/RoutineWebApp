@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 // แผงปฏิทิน: อีเวนต์ 7 วันข้างหน้า + เพิ่ม/ลบ (sync ตรงกับ Google Calendar) + มุมมองตารางเดือน
 import { useEffect, useState, useCallback, useMemo } from 'react'
@@ -10,6 +10,10 @@ import { CalendarDays, CheckSquare, Plus, X, ChevronLeft, ChevronRight, Grid3x3 
 import { TZ } from '@/lib/dates'
 
 const WEEKDAY_LABELS = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส']
+
+// สีหมวดหมู่ตาม design.md (ปฏิทิน/งาน = ฟ้า) — event/task ของ Google ไม่มี field สีต่อรายการ
+// เลยใช้สีเดียวนี้กับ badge ทุกจุด (ไม่มีข้อมูลจริงให้แยกหมวดย่อยตอนนี้)
+const CATEGORY_COLOR = '#4FC1E0'
 
 // วันที่แบบ "YYYY-MM-DD" ตาม timezone ของแอป (Asia/Bangkok) — ใช้ตรงกับ pattern เดียวกับ lib/dates.ts
 // (toLocaleDateString('sv-SE', ...) ให้ format ISO date ตรงๆ) กันปัญหา event ใกล้เที่ยงคืนเพี้ยนวัน
@@ -178,37 +182,37 @@ export default function CalendarPanel() {
     return new Date(due).toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', timeZone: TZ })
   }
 
-  const inputCls = 'bg-[#14171F] border border-[#2A2F3D] rounded-lg px-2 py-1.5 text-xs outline-none'
+  const inputCls = 'bg-[#171412] border border-[#332D28] rounded-lg px-2 py-1.5 text-xs outline-none'
 
   if (state === 'loading') return null
 
   return (
-    <div className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4 mb-6">
+    <div className="bg-[#201C19] border border-[#332D28] rounded-xl p-4 mb-6">
       <div className="flex items-center justify-between mb-1">
-        <p className="text-xs text-[#7C8394] flex items-center gap-1.5">
+        <p className="text-xs text-[#8A8178] flex items-center gap-1.5">
           <CalendarDays size={13} /> ปฏิทิน
         </p>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-md border border-[#2A2F3D] overflow-hidden text-[10px]">
+          <div className="flex rounded-md border border-[#332D28] overflow-hidden text-[10px]">
             {[7, 30].map(d => (
               <button key={d} onClick={() => { setViewMode('agenda'); setDays(d) }}
                 className={`px-2 py-1 ${viewMode === 'agenda' && days === d
-                  ? 'bg-[#EDEAE0] text-[#14171F] font-semibold'
-                  : 'text-[#7C8394]'}`}>
+                  ? 'bg-[#EDEAE0] text-[#171412] font-semibold'
+                  : 'text-[#8A8178]'}`}>
                 {d === 7 ? '7 วัน' : 'เดือน'}
               </button>
             ))}
             <button onClick={() => setViewMode('grid')}
               title="มุมมองตาราง"
               className={`px-2 py-1 flex items-center gap-1 ${viewMode === 'grid'
-                ? 'bg-[#EDEAE0] text-[#14171F] font-semibold'
-                : 'text-[#7C8394]'}`}>
+                ? 'bg-[#EDEAE0] text-[#171412] font-semibold'
+                : 'text-[#8A8178]'}`}>
               <Grid3x3 size={11} />
             </button>
           </div>
           {state === 'ready' && (
             <button onClick={() => setAdding(a => !a)}
-              className="text-[#7C8394]"><Plus size={14} /></button>
+              className="text-[#8A8178]"><Plus size={14} /></button>
           )}
         </div>
       </div>
@@ -216,7 +220,7 @@ export default function CalendarPanel() {
       {state === 'notConnected' && (
         <a href="/api/calendar/auth"
           className="block text-center text-sm font-semibold rounded-lg
-            border border-[#2A2F3D] py-2 mt-2">
+            border border-[#332D28] py-2 mt-2">
           เชื่อม Google Calendar
         </a>
       )}
@@ -231,36 +235,36 @@ export default function CalendarPanel() {
           {viewMode === 'agenda' && (
             <>
               {tasks.length === 0 && events.length === 0 && (
-                <p className="text-xs text-[#7C8394] mt-1">ว่าง ไม่มีอีเวนต์ 7 วันนี้</p>
+                <p className="text-xs text-[#8A8178] mt-1">ว่าง ไม่มีอีเวนต์ 7 วันนี้</p>
               )}
               {tasks.map(t => (
                 <div key={t.id} className="flex items-center gap-2 py-1">
                   <button onClick={() => completeTask(t)} title="ทำเสร็จแล้ว"
-                    className="text-[#7C8394] hover:text-[#4FC1E0] flex-shrink-0">
+                    className="text-[#8A8178] hover:text-[#4FC1E0] flex-shrink-0">
                     <CheckSquare size={14} />
                   </button>
-                  <span className="text-xs text-[#7C8394] w-24 flex-shrink-0 tabular-nums">
+                  <span className="text-xs text-[#8A8178] w-24 flex-shrink-0 tabular-nums">
                     {fmtTaskDue(t.due)}
                   </span>
                   <span className="text-sm flex-1 min-w-0 truncate">
                     {t.title}
-                    <span className="text-[10px] text-[#7C8394] ml-1.5">☑ {t.listName}</span>
+                    <span className="text-[10px] text-[#8A8178] ml-1.5">☑ {t.listName}</span>
                   </span>
                 </div>
               ))}
               {events.map(e => (
                 <div key={e.id} className="flex items-center gap-2 py-1">
-                  <span className="text-xs text-[#7C8394] w-28 flex-shrink-0 tabular-nums">
+                  <span className="text-xs text-[#8A8178] w-28 flex-shrink-0 tabular-nums">
                     {fmtEvent(e)}
                   </span>
                   <span className="text-sm flex-1 min-w-0 truncate">
                     {e.title}
                     {e.calendarName && e.calendarId !== 'primary' && (
-                      <span className="text-[10px] text-[#7C8394] ml-1.5">({e.calendarName})</span>
+                      <span className="text-[10px] text-[#8A8178] ml-1.5">({e.calendarName})</span>
                     )}
                     </span>
                   <button onClick={() => removeEvent(e.id)}
-                    className="text-[#7C8394] p-1 w-7 flex justify-center flex-shrink-0">
+                    className="text-[#8A8178] p-1 w-7 flex justify-center flex-shrink-0">
                     <X size={12} />
                   </button>
                 </div>
@@ -273,7 +277,7 @@ export default function CalendarPanel() {
               <div className="flex items-center justify-between mb-2">
                 <button onClick={() => setGridMonth(m => subMonths(m, 1))}
                   disabled={gridMonth.getTime() <= minGridMonth.getTime()}
-                  className="p-1 rounded text-[#7C8394] disabled:opacity-30 disabled:cursor-not-allowed">
+                  className="p-1 rounded text-[#8A8178] disabled:opacity-30 disabled:cursor-not-allowed">
                   <ChevronLeft size={16} />
                 </button>
                 <p className="text-xs font-medium">
@@ -281,14 +285,14 @@ export default function CalendarPanel() {
                 </p>
                 <button onClick={() => setGridMonth(m => addMonths(m, 1))}
                   disabled={gridMonth.getTime() >= maxGridMonth.getTime()}
-                  className="p-1 rounded text-[#7C8394] disabled:opacity-30 disabled:cursor-not-allowed">
+                  className="p-1 rounded text-[#8A8178] disabled:opacity-30 disabled:cursor-not-allowed">
                   <ChevronRight size={16} />
                 </button>
               </div>
 
               <div className="grid grid-cols-7 gap-1 mb-1">
                 {WEEKDAY_LABELS.map(l => (
-                  <p key={l} className="text-center text-[10px] text-[#7C8394]">{l}</p>
+                  <p key={l} className="text-center text-[10px] text-[#8A8178]">{l}</p>
                 ))}
               </div>
               <div className="grid grid-cols-7 gap-1">
@@ -296,36 +300,35 @@ export default function CalendarPanel() {
                   const key = gridDayKey(d)
                   const inMonth = isSameMonth(d, gridMonth)
                   const dayItems = itemsByDay.get(key)
-                  const allLabels = [
-                    ...(dayItems?.events ?? []).map(e => e.allDay ? e.title
-                      : `${new Date(e.start).toLocaleTimeString('th-TH',
-                          { hour: '2-digit', minute: '2-digit', timeZone: TZ })} ${e.title}`),
-                    ...(dayItems?.tasks ?? []).map(t => t.title),
-                  ]
-                  const shown = allLabels.slice(0, 2)
-                  const overflow = allLabels.length - shown.length
+                  const hasItems = ((dayItems?.events.length ?? 0) + (dayItems?.tasks.length ?? 0)) > 0
+                  const today = isToday(d)
                   const selected = selectedGridDay === key
+                  // today ชนะเสมอถ้าชนกับ selected (เช่นตอนเพิ่งโหลดหน้า selectedGridDay = วันนี้พอดี)
+                  // ring ของ selected ใช้เฉพาะตอนวันที่เลือกไม่ใช่วันนี้เท่านั้น
+                  const showRing = selected && !today
                   return (
                     <button key={key} disabled={!inMonth}
                       onClick={() => setSelectedGridDay(key)}
-                      className={`rounded-lg flex flex-col items-start text-left gap-0.5 px-1 py-1
-                        min-h-[60px] text-xs transition-colors overflow-hidden
-                        ${!inMonth ? 'text-[#2A2F3D] cursor-default'
-                          : selected ? 'bg-[#4FC1E0] text-[#14171F] font-semibold' : 'text-[#EDEAE0] hover:bg-[#14171F]'}
-                        ${isToday(d) && !selected ? 'ring-1 ring-inset ring-[#4FC1E0]' : ''}`}>
-                      <span>{d.getDate()}</span>
-                      {shown.map((label, i) => (
-                        <span key={i}
-                          className={`text-[9px] leading-tight truncate w-full font-normal
-                            ${selected ? 'text-[#14171F]' : 'text-[#7C8394]'}`}>
-                          {label}
-                        </span>
-                      ))}
-                      {overflow > 0 && (
-                        <span className={`text-[9px] leading-tight font-normal
-                          ${selected ? 'text-[#14171F]' : 'text-[#7C8394]'}`}>
-                          +{overflow} ...
-                        </span>
+                      className={`relative rounded-lg flex flex-col items-center justify-center
+                        min-h-[60px] text-xs transition-colors
+                        ${!inMonth ? 'cursor-default' : 'hover:bg-[#171412]'}`}>
+                      <span className={`relative w-7 h-7 flex items-center justify-center rounded-full font-mono
+                        ${!inMonth ? 'text-[#332D28]'
+                          : today ? 'bg-[#4FC1E0] text-[#171412] font-semibold'
+                          : showRing ? 'text-[#EDEAE0] ring-1 ring-[#4FC1E0] font-semibold'
+                          : hasItems ? 'text-[#EDEAE0]'
+                          : 'text-[#8A8178]'}`}>
+                        {d.getDate()}
+                        {/* วันนี้ + มีนัดหมาย — badge ขอบสีพื้นการ์ด (ตัดกับวงกลม accent) มุมขวาบน ซ้อนขอบวงกลม */}
+                        {hasItems && today && (
+                          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-[#201C19]"
+                            style={{ background: CATEGORY_COLOR }} />
+                        )}
+                      </span>
+                      {/* ไม่ใช่วันนี้แต่มีนัดหมาย — จุดสีหมวดหมู่มุมขวาบนของทั้งเซลล์ (ไม่ใช่ใต้เลขวันที่แบบเดิม) */}
+                      {hasItems && !today && inMonth && (
+                        <span className="absolute top-1 right-1.5 w-1.5 h-1.5 rounded-full"
+                          style={{ background: CATEGORY_COLOR }} />
                       )}
                     </button>
                   )
@@ -337,27 +340,27 @@ export default function CalendarPanel() {
                 const dayEvents = dayItems?.events ?? []
                 const dayTasksList = dayItems?.tasks ?? []
                 return (
-                  <div className="mt-3 pt-3 border-t border-[#2A2F3D]">
-                    <p className="text-xs text-[#7C8394] mb-1.5">
+                  <div className="mt-3 pt-3 border-t border-[#332D28]">
+                    <p className="text-xs text-[#8A8178] mb-1.5">
                       {new Date(selectedGridDay).toLocaleDateString('th-TH',
                         { weekday: 'long', day: 'numeric', month: 'long', timeZone: TZ })}
                     </p>
                     {dayEvents.length === 0 && dayTasksList.length === 0 ? (
-                      <p className="text-xs text-[#7C8394]">ไม่มีนัดหมาย</p>
+                      <p className="text-xs text-[#8A8178]">ไม่มีนัดหมาย</p>
                     ) : (
                       <div className="space-y-1.5">
                         {dayTasksList.map(t => (
                           <div key={t.id} className="flex items-center gap-2">
-                            <CheckSquare size={12} className="text-[#7C8394] flex-shrink-0" />
+                            <CheckSquare size={12} className="text-[#8A8178] flex-shrink-0" />
                             <span className="text-sm flex-1 min-w-0 truncate">
                               {t.title}
-                              <span className="text-[10px] text-[#7C8394] ml-1.5">☑ {t.listName}</span>
+                              <span className="text-[10px] text-[#8A8178] ml-1.5">☑ {t.listName}</span>
                             </span>
                           </div>
                         ))}
                         {dayEvents.map(e => (
                           <div key={e.id} className="flex items-center gap-2">
-                            <span className="text-xs text-[#7C8394] w-14 flex-shrink-0 tabular-nums">
+                            <span className="text-xs text-[#8A8178] w-14 flex-shrink-0 tabular-nums">
                               {e.allDay ? 'ทั้งวัน' : new Date(e.start).toLocaleTimeString('th-TH',
                                 { hour: '2-digit', minute: '2-digit', timeZone: TZ })}
                             </span>
@@ -374,12 +377,12 @@ export default function CalendarPanel() {
 
           {adding && (
             <div className="mt-2 space-y-2">
-              <div className="flex rounded-md border border-[#2A2F3D] overflow-hidden text-[10px] w-fit">
+              <div className="flex rounded-md border border-[#332D28] overflow-hidden text-[10px] w-fit">
                 {(['event', 'task'] as const).map(k => (
                   <button key={k} onClick={() => setForm(p => ({ ...p, kind: k }))}
                     className={`px-2 py-1 ${form.kind === k
-                      ? 'bg-[#EDEAE0] text-[#14171F] font-semibold'
-                      : 'text-[#7C8394]'}`}>
+                      ? 'bg-[#EDEAE0] text-[#171412] font-semibold'
+                      : 'text-[#8A8178]'}`}>
                     {k === 'event' ? 'กิจกรรม' : 'Task'}
                   </button>
                 ))}
@@ -390,18 +393,18 @@ export default function CalendarPanel() {
                   <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2">
                     <input placeholder="ชื่ออีเวนต์..." value={form.title}
                       onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
-                      className="min-w-0 bg-[#14171F] border border-[#2A2F3D] rounded-lg
-                        px-3 py-1.5 text-sm outline-none focus:border-[#7C8394]" />
+                      className="min-w-0 bg-[#171412] border border-[#332D28] rounded-lg
+                        px-3 py-1.5 text-sm outline-none focus:border-[#8A8178]" />
                     <input type="date" value={form.date}
                       onChange={e => setForm(p => ({ ...p, date: e.target.value }))}
-                      className="bg-[#14171F] border border-[#2A2F3D] rounded-lg
+                      className="bg-[#171412] border border-[#332D28] rounded-lg
                         px-2 py-1.5 text-xs outline-none" />
                     <input type="time" value={form.time}
                       onChange={e => setForm(p => ({ ...p, time: e.target.value }))}
-                      className="bg-[#14171F] border border-[#2A2F3D] rounded-lg
+                      className="bg-[#171412] border border-[#332D28] rounded-lg
                         px-2 py-1.5 text-xs outline-none" />
                     <button onClick={addEvent}
-                      className="px-3 rounded-lg bg-[#EDEAE0] text-[#14171F]
+                      className="px-3 rounded-lg bg-[#EDEAE0] text-[#171412]
                         text-xs font-semibold">เพิ่ม</button>
                   </div>
                   <div className="grid grid-cols-[1fr_1fr] gap-2">
@@ -425,31 +428,31 @@ export default function CalendarPanel() {
                   <div className="grid grid-cols-[1fr_auto] gap-2">
                     <input placeholder="ชื่อ Task..." value={form.title}
                       onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
-                      className="min-w-0 bg-[#14171F] border border-[#2A2F3D] rounded-lg
-                        px-3 py-1.5 text-sm outline-none focus:border-[#7C8394]" />
+                      className="min-w-0 bg-[#171412] border border-[#332D28] rounded-lg
+                        px-3 py-1.5 text-sm outline-none focus:border-[#8A8178]" />
                     <input type="date" value={form.date}
                       onChange={e => setForm(p => ({ ...p, date: e.target.value }))}
-                      className="bg-[#14171F] border border-[#2A2F3D] rounded-lg
+                      className="bg-[#171412] border border-[#332D28] rounded-lg
                         px-2 py-1.5 text-xs outline-none" />
                   </div>
                   <input placeholder="รายละเอียด (ถ้ามี)..." value={form.description}
                     onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-                    className="w-full bg-[#14171F] border border-[#2A2F3D] rounded-lg
-                      px-3 py-1.5 text-sm outline-none focus:border-[#7C8394]" />
+                    className="w-full bg-[#171412] border border-[#332D28] rounded-lg
+                      px-3 py-1.5 text-sm outline-none focus:border-[#8A8178]" />
                   <div className="grid grid-cols-[1fr_auto] gap-2">
                     <select value={form.listId}
                       onChange={e => setForm(p => ({ ...p, listId: e.target.value }))}
-                      className="min-w-0 bg-[#14171F] border border-[#2A2F3D] rounded-lg
+                      className="min-w-0 bg-[#171412] border border-[#332D28] rounded-lg
                         px-2 py-1.5 text-xs outline-none">
                       {taskLists.map(l => (
                         <option key={l.id} value={l.id}>{l.name}</option>
                       ))}
                     </select>
                     <button onClick={addEvent}
-                      className="px-3 rounded-lg bg-[#EDEAE0] text-[#14171F]
+                      className="px-3 rounded-lg bg-[#EDEAE0] text-[#171412]
                         text-xs font-semibold">เพิ่ม</button>
                   </div>
-                  <p className="text-[10px] text-[#7C8394]">
+                  <p className="text-[10px] text-[#8A8178]">
                     Task ระบุได้แค่วัน ไม่มีเวลา (ข้อจำกัดของ Google Tasks)
                   </p>
                 </div>

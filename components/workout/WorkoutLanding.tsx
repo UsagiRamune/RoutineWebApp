@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 // หน้า landing ของ workout: day picker (เลือกดู/เล่นวันไหนก็ได้ ไม่ผูกกับวันนี้จริง) + การ์ดสรุปของวันที่
 // เลือก + ปุ่มเริ่ม/เล่นต่อ + ประวัติย่อ — เริ่มแล้วสลับไปโชว์ WorkoutPlayer (ไม่ต้องแยก route)
@@ -38,7 +38,7 @@ interface Props {
 const WEEKDAY_LABELS = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส']
 
 const KIND_DOT_COLOR: Record<WorkoutDayKind, string> = {
-  heavy: '#F0A345', light: '#4FC1E0', rest: '#7C8394',
+  heavy: '#F0A345', light: '#4FC1E0', rest: '#8A8178',
 }
 
 function estimateSeconds(exercises: { duration_seconds: number | null }[]): number {
@@ -143,23 +143,23 @@ export default function WorkoutLanding({ days, history, today, todayWeekday, inc
   const cooldown = day?.workout_exercises.filter(e => e.block === 'cooldown') ?? []
 
   return (
-    <main className="min-h-screen bg-[#14171F] text-[#EDEAE0] pb-16">
+    <main className="min-h-screen bg-[#171412] text-[#EDEAE0] pb-16">
       <div className="max-w-lg mx-auto px-4 pt-8">
         <h1 className="text-xl font-semibold mb-4">ออกกำลังกาย</h1>
 
         {incompleteForOtherDay && !bannerDismissed && (
-          <div className="bg-[#1B1F2A] border border-[#F0A345] rounded-xl p-3 mb-4
+          <div className="bg-[#201C19] border border-[#F0A345] rounded-xl p-3 mb-4
             flex items-center gap-2">
             <p className="text-xs flex-1 min-w-0">
               มีเซสชันค้างไว้: <span className="font-medium">{incompleteDay?.label}</span> — เล่นต่อ?
             </p>
             <button onClick={jumpAndResume}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#F0A345] text-[#14171F]
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#F0A345] text-[#171412]
                 flex-shrink-0">
               เล่นต่อ
             </button>
             <button onClick={() => setBannerDismissed(true)}
-              className="text-[#7C8394] p-1 flex-shrink-0"><X size={14} /></button>
+              className="text-[#8A8178] p-1 flex-shrink-0"><X size={14} /></button>
           </div>
         )}
 
@@ -172,9 +172,9 @@ export default function WorkoutLanding({ days, history, today, todayWeekday, inc
               <button key={d.day_of_week} onClick={() => setSelectedWeekday(d.day_of_week)}
                 className={`flex flex-col items-center justify-center gap-1 w-11 h-14 flex-shrink-0
                   rounded-xl transition-colors
-                  ${active ? 'bg-[#EDEAE0] text-[#14171F]' : 'bg-[#1B1F2A] text-[#EDEAE0]'}
+                  ${active ? 'bg-[#EDEAE0] text-[#171412]' : 'bg-[#201C19] text-[#EDEAE0]'}
                   ${!active && isToday ? 'ring-1 ring-[#4FC1E0]' : ''}
-                  ${!active ? 'border border-[#2A2F3D]' : ''}`}>
+                  ${!active ? 'border border-[#332D28]' : ''}`}>
                 <span className="text-xs font-semibold">{WEEKDAY_LABELS[d.day_of_week]}</span>
                 <span className="w-1.5 h-1.5 rounded-full" style={{ background: KIND_DOT_COLOR[d.kind] }} />
               </button>
@@ -182,11 +182,11 @@ export default function WorkoutLanding({ days, history, today, todayWeekday, inc
           })}
         </div>
 
-        <div className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-5 mb-4">
+        <div className="bg-[#201C19] border border-[#332D28] rounded-xl p-5 mb-4">
           {!day || day.kind === 'rest' ? (
             <>
               <p className="text-sm font-medium mb-1">{day?.label ?? '—'}</p>
-              <p className="text-sm text-[#7C8394]">
+              <p className="text-sm text-[#8A8178]">
                 {selectedWeekday === todayWeekday
                   ? 'วันนี้วันพัก — เดินเช้าตามสบาย' : 'วันพัก — เดินเช้าตามสบาย'}
               </p>
@@ -194,25 +194,25 @@ export default function WorkoutLanding({ days, history, today, todayWeekday, inc
           ) : day.kind === 'light' ? (
             <>
               <p className="text-sm font-medium mb-1">{day.label}</p>
-              <p className="text-xs text-[#7C8394] mb-4">คูลดาวน์/ยืดเหยียด {cooldown.length} ท่า
+              <p className="text-xs text-[#8A8178] mb-4">คูลดาวน์/ยืดเหยียด {cooldown.length} ท่า
                 {' '}· ประมาณ {fmtMinutes(estimateSeconds(cooldown))}</p>
               {incompleteForSelectedDay ? (
                 <div className="flex gap-2">
                   <button onClick={() => resume(incompleteForSelectedDay)} disabled={starting}
-                    className="flex-1 min-h-[48px] rounded-xl bg-[#4FC1E0] text-[#14171F]
+                    className="flex-1 min-h-[48px] rounded-xl bg-[#4FC1E0] text-[#171412]
                       text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
                     <Play size={16} /> เล่นต่อ (ค้างไว้ {remainingCount(day, incompleteForSelectedDay)} ท่า)
                   </button>
                   <button onClick={() => startFresh(incompleteForSelectedDay)} disabled={starting}
                     title="เริ่มใหม่ (ทิ้งความคืบหน้าเดิม)"
-                    className="min-h-[48px] px-3 rounded-xl border border-[#2A2F3D] text-[#7C8394]
+                    className="min-h-[48px] px-3 rounded-xl border border-[#332D28] text-[#8A8178]
                       disabled:opacity-50">
                     <RotateCcw size={16} />
                   </button>
                 </div>
               ) : (
                 <button onClick={start} disabled={starting}
-                  className="w-full min-h-[48px] rounded-xl bg-[#4FC1E0] text-[#14171F]
+                  className="w-full min-h-[48px] rounded-xl bg-[#4FC1E0] text-[#171412]
                     text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
                   <Play size={16} /> เริ่ม
                 </button>
@@ -221,42 +221,42 @@ export default function WorkoutLanding({ days, history, today, todayWeekday, inc
           ) : (
             <>
               <p className="text-sm font-medium mb-1">{day.label}</p>
-              <p className="text-xs text-[#7C8394] mb-3">
+              <p className="text-xs text-[#8A8178] mb-3">
                 วอร์มอัพ {warmup.length} ท่า · Circuit {main.length} ท่า × {day.rounds} รอบ
                 {' '}· คูลดาวน์ {cooldown.length} ท่า
               </p>
               <div className="flex flex-wrap gap-1.5 mb-4">
-                <span className="text-[10px] px-2 py-1 rounded-full border border-[#2A2F3D] text-[#7C8394]">
+                <span className="text-[10px] px-2 py-1 rounded-full border border-[#332D28] text-[#8A8178]">
                   วอร์มอัพ ~{fmtMinutes(estimateSeconds(warmup))}
                 </span>
-                <span className="text-[10px] px-2 py-1 rounded-full border border-[#2A2F3D] text-[#7C8394]">
+                <span className="text-[10px] px-2 py-1 rounded-full border border-[#332D28] text-[#8A8178]">
                   Circuit ~{fmtMinutes(
                     estimateSeconds(main) * day.rounds +
                     (main.length > 1 ? (main.length - 1) * day.exercise_rest_seconds * day.rounds : 0) +
                     (day.rounds > 1 ? (day.rounds - 1) * day.round_rest_seconds : 0)
                   )}
                 </span>
-                <span className="text-[10px] px-2 py-1 rounded-full border border-[#2A2F3D] text-[#7C8394]">
+                <span className="text-[10px] px-2 py-1 rounded-full border border-[#332D28] text-[#8A8178]">
                   คูลดาวน์ ~{fmtMinutes(estimateSeconds(cooldown))}
                 </span>
               </div>
               {incompleteForSelectedDay ? (
                 <div className="flex gap-2">
                   <button onClick={() => resume(incompleteForSelectedDay)} disabled={starting}
-                    className="flex-1 min-h-[48px] rounded-xl bg-[#4FC1E0] text-[#14171F]
+                    className="flex-1 min-h-[48px] rounded-xl bg-[#4FC1E0] text-[#171412]
                       text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
                     <Play size={16} /> เล่นต่อ (ค้างไว้ {remainingCount(day, incompleteForSelectedDay)} ท่า)
                   </button>
                   <button onClick={() => startFresh(incompleteForSelectedDay)} disabled={starting}
                     title="เริ่มใหม่ (ทิ้งความคืบหน้าเดิม)"
-                    className="min-h-[48px] px-3 rounded-xl border border-[#2A2F3D] text-[#7C8394]
+                    className="min-h-[48px] px-3 rounded-xl border border-[#332D28] text-[#8A8178]
                       disabled:opacity-50">
                     <RotateCcw size={16} />
                   </button>
                 </div>
               ) : (
                 <button onClick={start} disabled={starting}
-                  className="w-full min-h-[48px] rounded-xl bg-[#4FC1E0] text-[#14171F]
+                  className="w-full min-h-[48px] rounded-xl bg-[#4FC1E0] text-[#171412]
                     text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50">
                   <Play size={16} /> เริ่มออกกำลังกาย
                 </button>
@@ -266,15 +266,15 @@ export default function WorkoutLanding({ days, history, today, todayWeekday, inc
         </div>
 
         {history.length > 0 && (
-          <div className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4">
-            <p className="text-xs text-[#7C8394] mb-2">ประวัติล่าสุด</p>
+          <div className="bg-[#201C19] border border-[#332D28] rounded-xl p-4">
+            <p className="text-xs text-[#8A8178] mb-2">ประวัติล่าสุด</p>
             <div className="space-y-1.5">
               {history.map(s => (
                 <div key={s.id} className="flex items-center gap-2 text-sm">
-                  <span className="text-xs text-[#7C8394] w-20 flex-shrink-0 tabular-nums">
+                  <span className="text-xs text-[#8A8178] w-20 flex-shrink-0 tabular-nums">
                     {new Date(s.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
                   </span>
-                  <span className="flex-1 min-w-0 truncate text-[#7C8394]">
+                  <span className="flex-1 min-w-0 truncate text-[#8A8178]">
                     {s.workout_days?.label ?? '?'}
                   </span>
                   {s.completed_at ? (
@@ -282,7 +282,7 @@ export default function WorkoutLanding({ days, history, today, todayWeekday, inc
                       ✓ {s.active_minutes ?? '?'} นาที
                     </span>
                   ) : (
-                    <span className="text-[#7C8394] text-xs flex-shrink-0">ยังไม่จบ</span>
+                    <span className="text-[#8A8178] text-xs flex-shrink-0">ยังไม่จบ</span>
                   )}
                 </div>
               ))}

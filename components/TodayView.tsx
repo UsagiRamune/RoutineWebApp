@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 // UI หน้า "วันนี้" — checklist (optimistic), timer + session พร้อม timestamp,
 // รายละเอียดแบบ topic/subtopic เพิ่มลบอิสระ
@@ -150,12 +150,12 @@ export default function TodayView({ categories, today, projects }: Props) {
   })
 
   return (
-    <main className="min-h-screen bg-[#14171F] text-[#EDEAE0] pb-16">
+    <main className="min-h-screen bg-[#171412] text-[#EDEAE0] pb-16">
       <div className="max-w-3xl mx-auto px-4 pt-8">
 
         <div className="mb-6">
           <h1 className="text-xl font-semibold">วันนี้</h1>
-          <p className="text-sm text-[#7C8394]">{dateLabel}</p>
+          <p className="text-sm text-[#8A8178]">{dateLabel}</p>
         </div>
 
         {categories.map((cat) => (
@@ -172,17 +172,17 @@ export default function TodayView({ categories, today, projects }: Props) {
                 const items = routine.routine_items.filter(i => i.is_active)
                 return (
                   <div key={routine.id}
-                    className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4 mb-3">
+                    className="bg-[#201C19] border border-[#332D28] rounded-xl p-4 mb-3">
                     <div className="flex items-center gap-2 mb-3">
                       <p className="font-medium text-sm">{routine.name}</p>
                       {routine.remind_at && routine.remind_enabled && (
-                        <span className="flex items-center gap-1 text-[10px] text-[#7C8394]
-                          px-1.5 py-0.5 rounded-full border border-[#2A2F3D]">
+                        <span className="flex items-center gap-1 text-[10px] text-[#8A8178]
+                          px-1.5 py-0.5 rounded-full border border-[#332D28]">
                           <Clock size={10} /> {routine.remind_at.slice(0, 5)}
                         </span>
                       )}
                       <button onClick={() => setEditing(editing === routine.id ? null : routine.id)}
-                        className="text-[#7C8394]"><Pencil size={12} /></button>
+                        className="text-[#8A8178]"><Pencil size={12} /></button>
                     </div>
                     {items.map((item) => {
                       const serverDone = item.item_completions?.some(
@@ -195,14 +195,14 @@ export default function TodayView({ categories, today, projects }: Props) {
                           className="w-full flex items-center gap-3 py-2 text-left">
                           <span className={`w-5 h-5 rounded-md border-2 flex-shrink-0
                             flex items-center justify-center text-xs
-                            ${done ? 'border-transparent text-[#14171F]' : 'border-[#7C8394]'}`}
+                            ${done ? 'border-transparent text-[#171412]' : 'border-[#8A8178]'}`}
                             style={done ? { background: cat.color } : {}}>
                             {done && '✓'}
                           </span>
-                          <span className={`text-sm ${done ? 'text-[#7C8394] line-through' : ''}`}>
+                          <span className={`text-sm ${done ? 'text-[#8A8178] line-through' : ''}`}>
                             {item.name}
                             {item.detail && (
-                              <span className="text-[#7C8394] ml-2 text-xs">{item.detail}</span>
+                              <span className="text-[#8A8178] ml-2 text-xs">{item.detail}</span>
                             )}
                           </span>
                         </button>
@@ -227,44 +227,44 @@ export default function TodayView({ categories, today, projects }: Props) {
 
               return (
                 <div key={routine.id}
-                  className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4 mb-3">
+                  className="bg-[#201C19] border border-[#332D28] rounded-xl p-4 mb-3">
 
                   {/* หัว: ชื่อ + timer ใหญ่ + ปุ่มเดียว */}
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
                       <p className="font-medium text-sm">{routine.name}</p>
                       {routine.remind_at && routine.remind_enabled && (
-                        <span className="flex items-center gap-1 text-[10px] text-[#7C8394]
-                          px-1.5 py-0.5 rounded-full border border-[#2A2F3D]">
+                        <span className="flex items-center gap-1 text-[10px] text-[#8A8178]
+                          px-1.5 py-0.5 rounded-full border border-[#332D28]">
                           <Clock size={10} /> {routine.remind_at.slice(0, 5)}
                         </span>
                       )}
                       <button onClick={() => setEditing(editing === routine.id ? null : routine.id)}
-                        className="text-[#7C8394]"><Pencil size={12} /></button>
+                        className="text-[#8A8178]"><Pencil size={12} /></button>
                     </div>
                     {running ? (
                       <button onClick={() => clockOut(running.id)}
                         className="flex items-center gap-2 text-sm font-semibold
-                          px-3 py-1.5 rounded-lg text-[#14171F] tabular-nums"
+                          px-3 py-1.5 rounded-lg text-[#171412] tabular-nums"
                         style={{ background: cat.color }}>
                         <Square size={12} /> {fmtRunning(running)}
                       </button>
                     ) : (
                       <button onClick={() => clockIn(routine.id)}
                         className="flex items-center gap-1.5 text-xs font-semibold
-                          px-3 py-1.5 rounded-lg border border-[#2A2F3D]">
+                          px-3 py-1.5 rounded-lg border border-[#332D28]">
                         <Play size={12} /> เริ่มจับเวลา
                       </button>
                     )}
                   </div>
 
-                  <p className="text-xs text-[#7C8394] mb-2">
+                  <p className="text-xs text-[#8A8178] mb-2">
                     รวมวันนี้ {fmtDuration(totalMins)}
                     {targetMins !== null && ` / เป้า ${fmtDuration(targetMins)}`}
                   </p>
 
                   {targetMins !== null && targetMins > 0 && (
-                    <div className="h-1.5 bg-[#14171F] rounded-full overflow-hidden mb-3">
+                    <div className="h-1.5 bg-[#171412] rounded-full overflow-hidden mb-3">
                       <div className="h-full rounded-full transition-all"
                         style={{
                           width: `${Math.min(100, (totalMins / targetMins) * 100)}%`,
@@ -276,16 +276,16 @@ export default function TodayView({ categories, today, projects }: Props) {
                   {/* sessions: timestamp เริ่ม-จบ + details */}
                   {todayEntries.map((e) => (
                     <div key={e.id}
-                      className="border-t border-[#2A2F3D] pt-2 mt-2">
+                      className="border-t border-[#332D28] pt-2 mt-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-[#7C8394] tabular-nums">
+                        <span className="text-xs text-[#8A8178] tabular-nums">
                           {fmtClock(e.clock_in)}
                           {' – '}
                           {e.clock_out ? fmtClock(e.clock_out) : 'กำลังจับ...'}
                           <span className="ml-2">({fmtDuration(minutesOfEntry(e))})</span>
                         </span>
                         <button onClick={() => addTopic(e)}
-                          className="flex items-center gap-1 text-xs text-[#7C8394]">
+                          className="flex items-center gap-1 text-xs text-[#8A8178]">
                           <Plus size={12} /> หัวข้อ
                         </button>
                       </div>
@@ -303,17 +303,17 @@ export default function TodayView({ categories, today, projects }: Props) {
                                   editTopic(e, topic.id, ev.target.value)
                               }}
                               className="flex-1 bg-transparent text-sm outline-none
-                                border-b border-transparent focus:border-[#2A2F3D] py-0.5"
+                                border-b border-transparent focus:border-[#332D28] py-0.5"
                             />
                             <button onClick={() => addSub(e, topic.id)}
-                              className="text-[#7C8394] p-1"><Plus size={12} /></button>
+                              className="text-[#8A8178] p-1"><Plus size={12} /></button>
                             <button onClick={() => removeTopic(e, topic.id)}
-                              className="text-[#7C8394] p-1"><X size={12} /></button>
+                              className="text-[#8A8178] p-1"><X size={12} /></button>
                           </div>
 
                           {topic.subs.map((sub) => (
                             <div key={sub.id} className="flex items-center gap-1.5 ml-5 mt-0.5">
-                              <span className="text-[#7C8394] text-xs">•</span>
+                              <span className="text-[#8A8178] text-xs">•</span>
                               <input
                                 defaultValue={sub.text}
                                 placeholder="รายละเอียดย่อย..."
@@ -322,10 +322,10 @@ export default function TodayView({ categories, today, projects }: Props) {
                                     editSub(e, topic.id, sub.id, ev.target.value)
                                 }}
                                 className="flex-1 bg-transparent text-xs outline-none
-                                  border-b border-transparent focus:border-[#2A2F3D] py-0.5"
+                                  border-b border-transparent focus:border-[#332D28] py-0.5"
                               />
                               <button onClick={() => removeSub(e, topic.id, sub.id)}
-                                className="text-[#7C8394] p-1"><X size={12} /></button>
+                                className="text-[#8A8178] p-1"><X size={12} /></button>
                             </div>
                           ))}
                         </div>
@@ -346,9 +346,9 @@ export default function TodayView({ categories, today, projects }: Props) {
                 onChange={(e) => setNewName((p) => ({ ...p, [cat.id]: e.target.value }))}
                 onKeyDown={(e) => e.key === 'Enter' && addRoutine(cat.id)}
                 placeholder={`+ เพิ่ม routine ใน${cat.name}...`}
-                className="flex-1 bg-transparent border border-dashed border-[#2A2F3D]
+                className="flex-1 bg-transparent border border-dashed border-[#332D28]
                   rounded-xl px-4 py-2.5 text-sm outline-none
-                  focus:border-[#7C8394] placeholder:text-[#7C8394]" />
+                  focus:border-[#8A8178] placeholder:text-[#8A8178]" />
             </div>
           </section>
         ))}

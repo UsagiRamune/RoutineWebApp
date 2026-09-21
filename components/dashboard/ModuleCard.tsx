@@ -22,17 +22,17 @@ interface Props {
 }
 
 export default function ModuleCard({ href, title, moduleKey, children, className = '' }: Props) {
-  const accent = ACCENT[moduleKey] ?? '#7C8394'
+  const accent = ACCENT[moduleKey] ?? '#8A8178'
   return (
     // prefetch={false} — การ์ดพวกนี้อยู่ในจอแรกของ dashboard พร้อมกันหมด ถ้าปล่อย default prefetch
     // (ทำงานตอน viewport visibility) จะยิง Server Component data ของทุกหน้าพร้อมกันตั้งแต่เปิด dashboard
     // เห็นจริงเป็น serverless invocation ~10 อันพร้อมกัน ทั้งที่ผู้ใช้อาจไม่ได้กดเข้าไปเลยสักหน้า
     <Link href={href} prefetch={false}
-      className={`flex flex-col bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4
-        hover:border-[#7C8394] transition-colors overflow-hidden ${className}`}>
+      className={`flex flex-col bg-[#201C19] border border-[#332D28] rounded-xl p-4
+        hover:border-[#8A8178] transition-colors overflow-hidden ${className}`}>
       {/* accent bar ด้านบน — บอกหมวดหมู่ (design.md) */}
       <div className="h-[2px] w-8 rounded-full mb-3 flex-shrink-0" style={{ background: accent }} />
-      <p className="text-[11px] text-[#7C8394] tracking-[0.05em] uppercase mb-2">{title}</p>
+      <p className="text-[11px] text-[#8A8178] tracking-[0.05em] uppercase mb-2">{title}</p>
       <div className="flex-1 min-h-0">{children}</div>
     </Link>
   )

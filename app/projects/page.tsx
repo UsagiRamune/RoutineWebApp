@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+﻿import { createClient } from '@/lib/supabase/server'
 import { ProjectWithFields } from '@/lib/supabase/types'
 import { requireModuleEnabled } from '@/lib/modules'
 import { todayKey, getRolloverHour } from '@/lib/dates'
@@ -24,7 +24,7 @@ export default async function ProjectsPage() {
     <>
       <AppNav />
       <RealtimeRefresher />
-      <main className="min-h-screen bg-[#14171F] text-[#EDEAE0] pb-16">
+      <main className="min-h-screen bg-[#171412] text-[#EDEAE0] pb-16">
         <div className="max-w-3xl mx-auto px-4 pt-8">
           <h1 className="text-xl font-semibold mb-6">โปรเจกต์</h1>
           <ProjectsList projects={(projects ?? []) as ProjectWithFields[]} today={today} />

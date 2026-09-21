@@ -1,4 +1,4 @@
-// คำนวณสถานะ intermittent fasting ณ เวลาปัจจุบัน (ยึด wall clock ของ Asia/Bangkok เสมอ)
+﻿// คำนวณสถานะ intermittent fasting ณ เวลาปัจจุบัน (ยึด wall clock ของ Asia/Bangkok เสมอ)
 import { TZ } from './dates'
 import { NutritionPlan } from './supabase/types'
 
@@ -66,7 +66,7 @@ export function weightAsOf(
 
 // สีบอกทิศทางน้ำหนักเทียบเป้า: cut ลงคือดี, bulk ขึ้นคือดี, normal ไม่ตัดสิน
 export function weightDeltaColor(delta: number | null, plan: NutritionPlan): string {
-  if (delta == null || plan === 'normal' || delta === 0) return '#7C8394'
+  if (delta == null || plan === 'normal' || delta === 0) return '#8A8178'
   const good = plan === 'cut' ? delta < 0 : delta > 0
   return good ? '#4FC1E0' : '#F0A345'
 }

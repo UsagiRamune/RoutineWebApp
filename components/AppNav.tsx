@@ -18,7 +18,8 @@ export default function AppNav() {
   }
 
   return (
-    <div className="bg-[#14171F] border-b border-[#2A2F3D]">
+    // nav เข้มกว่าพื้นหลังหน้า (#171412) อีกชั้นโดยตั้งใจ — กันไม่ให้ค่าสีชนกันจนดูเป็นผืนเดียวกับเนื้อหา
+    <div className="bg-[#0E0C0B] border-b border-[#332D28]">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
         {isHome ? (
           <Link href="/" className="text-sm font-semibold text-[#EDEAE0]">All-Rounder</Link>
@@ -31,11 +32,11 @@ export default function AppNav() {
           {/* prefetch={false} — settings เป็นหน้า data-heavy ที่ไม่ค่อยถูกกด ไม่ต้อง prefetch ทุกครั้งที่
               โผล่ในจอ (ต่างจากลิงก์ "/" หน้าแรกด้านบนที่ปล่อย default prefetch ไว้ เพราะเป็นหน้าที่กลับไปบ่อยสุด) */}
           <Link href="/settings" prefetch={false}
-            className="p-2 rounded-lg border border-[#2A2F3D] text-[#7C8394]">
+            className="p-2 rounded-lg border border-[#332D28] text-[#8A8178]">
             <Settings size={16} />
           </Link>
           <button onClick={logout}
-            className="p-2 rounded-lg border border-[#2A2F3D] text-[#7C8394]">
+            className="p-2 rounded-lg border border-[#332D28] text-[#8A8178]">
             <LogOut size={16} />
           </button>
         </div>

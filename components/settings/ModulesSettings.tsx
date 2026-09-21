@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 // สลับเปิด/ปิดโมดูล — RealtimeRefresher จะ refresh หน้าให้เองหลังเขียน DB
 import { useState } from 'react'
@@ -21,8 +21,8 @@ export default function ModulesSettings({ modules }: { modules: Module[] }) {
     <div className="space-y-2">
       {modules.map(m => (
         <div key={m.key}
-          className="flex items-center justify-between bg-[#1B1F2A]
-            border border-[#2A2F3D] rounded-xl p-4">
+          className="flex items-center justify-between bg-[#201C19]
+            border border-[#332D28] rounded-xl p-4">
           <span className="text-sm">{moduleLabel(m)}</span>
           <Toggle checked={m.enabled} onChange={() => toggle(m)} disabled={pending[m.key]} />
         </div>

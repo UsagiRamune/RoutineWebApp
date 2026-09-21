@@ -1,4 +1,4 @@
-// SegmentedBar — แทนที่ ProgressBar แบบเรียบยาวทุกจุดในแอป (design.md: layout patterns)
+﻿// SegmentedBar — แทนที่ ProgressBar แบบเรียบยาวทุกจุดในแอป (design.md: layout patterns)
 // แบ่งเป็นช่องสั้นๆ เรียงกัน — ช่องที่ผ่านแล้วติดสี ช่องที่เหลือจาง
 
 interface Props {
@@ -30,7 +30,7 @@ export default function SegmentedBar({
         <div
           key={i}
           className="h-1 flex-1 rounded-sm transition-colors"
-          style={{ background: i < filledCount ? activeColor : '#2A2F3D' }}
+          style={{ background: i < filledCount ? activeColor : '#332D28' }}
         />
       ))}
     </div>

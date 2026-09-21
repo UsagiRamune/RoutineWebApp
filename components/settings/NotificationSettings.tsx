@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 // ส่วน "การแจ้งเตือน" ในหน้าตั้งค่า: อีเมลปลายทาง, quiet hours, และตั้งค่าต่อประเภทแจ้งเตือน
 import { useState } from 'react'
@@ -55,48 +55,48 @@ export default function NotificationSettings({ appSettings, notificationSettings
   }
 
   return (
-    <div className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4 space-y-4">
+    <div className="bg-[#201C19] border border-[#332D28] rounded-xl p-4 space-y-4">
       <div>
-        <label className="text-xs text-[#7C8394] block mb-1">อีเมลรับแจ้งเตือน</label>
+        <label className="text-xs text-[#8A8178] block mb-1">อีเมลรับแจ้งเตือน</label>
         <input type="email" defaultValue={appSettings?.notify_email ?? ''} placeholder="you@example.com"
           onBlur={e => saveNotifyEmail(e.target.value)}
-          className="w-full bg-[#14171F] border border-[#2A2F3D] rounded-lg
-            px-3 py-2 text-sm outline-none focus:border-[#7C8394]" />
+          className="w-full bg-[#171412] border border-[#332D28] rounded-lg
+            px-3 py-2 text-sm outline-none focus:border-[#8A8178]" />
       </div>
 
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm">Quiet hours</p>
-          <p className="text-[10px] text-[#7C8394]">ปิดแจ้งเตือนตอนหลับ (ยกเว้นสรุปเช้า/สัปดาห์)</p>
+          <p className="text-[10px] text-[#8A8178]">ปิดแจ้งเตือนตอนหลับ (ยกเว้นสรุปเช้า/สัปดาห์)</p>
         </div>
         <Toggle checked={quietHours} onChange={toggleQuietHours} />
       </div>
 
-      <div className="space-y-2 pt-2 border-t border-[#2A2F3D]">
+      <div className="space-y-2 pt-2 border-t border-[#332D28]">
         {kinds.map(ns => (
-          <div key={ns.kind} className="border border-[#2A2F3D] rounded-lg p-3">
+          <div key={ns.kind} className="border border-[#332D28] rounded-lg p-3">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm">{ns.label}</span>
               <Toggle checked={ns.enabled} onChange={() => toggleKind(ns.kind)} />
             </div>
             <div className="grid grid-cols-3 gap-2">
               <div>
-                <label className="text-[10px] text-[#7C8394] block mb-0.5">ครั้ง/วัน</label>
+                <label className="text-[10px] text-[#8A8178] block mb-0.5">ครั้ง/วัน</label>
                 <input type="number" min="0" defaultValue={ns.max_per_day ?? ''}
                   onBlur={e => updateField(ns.kind, 'max_per_day', e.target.value)}
-                  className="w-full bg-[#14171F] border border-[#2A2F3D] rounded px-2 py-1.5 text-xs outline-none" />
+                  className="w-full bg-[#171412] border border-[#332D28] rounded px-2 py-1.5 text-xs outline-none" />
               </div>
               <div>
-                <label className="text-[10px] text-[#7C8394] block mb-0.5">ห่างขั้นต่ำ (นาที)</label>
+                <label className="text-[10px] text-[#8A8178] block mb-0.5">ห่างขั้นต่ำ (นาที)</label>
                 <input type="number" min="0" defaultValue={ns.min_gap_minutes ?? ''}
                   onBlur={e => updateField(ns.kind, 'min_gap_minutes', e.target.value)}
-                  className="w-full bg-[#14171F] border border-[#2A2F3D] rounded px-2 py-1.5 text-xs outline-none" />
+                  className="w-full bg-[#171412] border border-[#332D28] rounded px-2 py-1.5 text-xs outline-none" />
               </div>
               <div>
-                <label className="text-[10px] text-[#7C8394] block mb-0.5">ล่วงหน้า (นาที)</label>
+                <label className="text-[10px] text-[#8A8178] block mb-0.5">ล่วงหน้า (นาที)</label>
                 <input type="number" min="0" defaultValue={ns.lead_minutes ?? ''}
                   onBlur={e => updateField(ns.kind, 'lead_minutes', e.target.value)}
-                  className="w-full bg-[#14171F] border border-[#2A2F3D] rounded px-2 py-1.5 text-xs outline-none" />
+                  className="w-full bg-[#171412] border border-[#332D28] rounded px-2 py-1.5 text-xs outline-none" />
               </div>
             </div>
           </div>
@@ -104,7 +104,7 @@ export default function NotificationSettings({ appSettings, notificationSettings
       </div>
 
       <button onClick={sendTest} disabled={testState === 'sending'}
-        className="w-full py-2.5 rounded-lg bg-[#EDEAE0] text-[#14171F] text-sm font-semibold disabled:opacity-50">
+        className="w-full py-2.5 rounded-lg bg-[#EDEAE0] text-[#171412] text-sm font-semibold disabled:opacity-50">
         {testState === 'sending' ? 'กำลังส่ง...' : testState === 'sent' ? 'ส่งแล้ว ✓' : 'ส่งเมลทดสอบ'}
       </button>
       {testState === 'error' && <p className="text-xs text-[#E4574A]">{testMsg}</p>}

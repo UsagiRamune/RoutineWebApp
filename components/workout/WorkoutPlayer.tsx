@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 // เครื่องเล่นออกกำลังกาย: warmup (เรียงครั้งเดียว) → main (circuit วนตาม rounds) → cooldown (เรียงครั้งเดียว) → สรุป
 // สร้าง flat "steps" ล่วงหน้าทั้งเวิร์กเอาต์ (ท่า + หน้าจอพักคั่น) เดินหน้าทีละ index เดียว
@@ -290,32 +290,32 @@ export default function WorkoutPlayer({
   if (phase === 'summary') {
     const exerciseById = new Map(day.workout_exercises.map(e => [e.id, e]))
     return (
-      <div className="min-h-screen bg-[#14171F] text-[#EDEAE0] flex flex-col">
+      <div className="min-h-screen bg-[#171412] text-[#EDEAE0] flex flex-col">
         <div className="max-w-lg mx-auto w-full px-4 pt-10 pb-16 flex-1">
-          <p className="text-xs text-[#7C8394] mb-1">จบเวิร์กเอาต์แล้ว</p>
+          <p className="text-xs text-[#8A8178] mb-1">จบเวิร์กเอาต์แล้ว</p>
           <h1 className="text-2xl font-semibold mb-6">{day.label}</h1>
 
-          <div className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-5 mb-4 text-center">
+          <div className="bg-[#201C19] border border-[#332D28] rounded-xl p-5 mb-4 text-center">
             <p className="text-4xl font-bold tabular-nums text-[#4FC1E0]">{finalMinutes}</p>
-            <p className="text-xs text-[#7C8394] mt-1">นาทีที่ออกกำลังกาย</p>
+            <p className="text-xs text-[#8A8178] mt-1">นาทีที่ออกกำลังกาย</p>
           </div>
 
-          <div className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4 mb-4">
+          <div className="bg-[#201C19] border border-[#332D28] rounded-xl p-4 mb-4">
             <p className="text-sm">
               <span className="text-2xl font-semibold">{doneList.length}</span>
-              <span className="text-[#7C8394]">/{steps.filter(s => s.type === 'exercise').length ||
+              <span className="text-[#8A8178]">/{steps.filter(s => s.type === 'exercise').length ||
                 (day.workout_exercises.length || 0)} ท่าที่ทำ</span>
             </p>
           </div>
 
           {skippedList.length > 0 && (
-            <div className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4 mb-4">
-              <p className="text-xs text-[#7C8394] mb-2">ท่าที่ข้าม</p>
+            <div className="bg-[#201C19] border border-[#332D28] rounded-xl p-4 mb-4">
+              <p className="text-xs text-[#8A8178] mb-2">ท่าที่ข้าม</p>
               <div className="space-y-1">
                 {skippedList.map((s, i) => {
                   const ex = exerciseById.get(s.exercise_id)
                   return (
-                    <p key={i} className="text-sm text-[#7C8394]">
+                    <p key={i} className="text-sm text-[#8A8178]">
                       {ex?.name ?? '?'} {day.rounds > 1 && ex?.block === 'main' && `(รอบ ${s.round})`}
                     </p>
                   )
@@ -325,7 +325,7 @@ export default function WorkoutPlayer({
           )}
 
           <button onClick={onFinish}
-            className="w-full min-h-[48px] rounded-xl bg-[#EDEAE0] text-[#14171F] text-sm font-semibold mt-4">
+            className="w-full min-h-[48px] rounded-xl bg-[#EDEAE0] text-[#171412] text-sm font-semibold mt-4">
             เสร็จสิ้น
           </button>
         </div>
@@ -341,14 +341,14 @@ export default function WorkoutPlayer({
   if (prepping && step.type === 'exercise') {
     const progress = (step.globalIndex / step.totalExercise) * 100
     return (
-      <div className="min-h-screen bg-[#14171F] text-[#EDEAE0] flex flex-col">
+      <div className="min-h-screen bg-[#171412] text-[#EDEAE0] flex flex-col">
         <Header progress={progress} onExit={handleExitClick} />
         <div className="max-w-lg mx-auto w-full px-4 flex-1 flex flex-col items-center justify-center text-center">
-          <p className="text-sm text-[#7C8394] mb-2">เตรียมตัว...</p>
+          <p className="text-sm text-[#8A8178] mb-2">เตรียมตัว...</p>
           <h2 className="text-xl font-semibold mb-6">{step.exercise.name}</h2>
           <CountdownRing totalSeconds={3} secondsLeft={prepSecondsLeft} color="#F0A345" />
           <button onClick={() => setPrepping(false)}
-            className="mt-8 min-h-[48px] px-6 text-sm text-[#7C8394]">
+            className="mt-8 min-h-[48px] px-6 text-sm text-[#8A8178]">
             เริ่มเลย
           </button>
         </div>
@@ -361,16 +361,16 @@ export default function WorkoutPlayer({
   if (step.type === 'rest') {
     const progress = (step.precedingCount / step.totalExercise) * 100
     return (
-      <div className="min-h-screen bg-[#14171F] text-[#EDEAE0] flex flex-col">
+      <div className="min-h-screen bg-[#171412] text-[#EDEAE0] flex flex-col">
         <Header progress={progress} onExit={handleExitClick} />
         <div className="max-w-lg mx-auto w-full px-4 flex-1 flex flex-col items-center justify-center text-center">
-          <p className="text-sm text-[#7C8394] mb-4">{phaseLabel(step, day.rounds)}</p>
+          <p className="text-sm text-[#8A8178] mb-4">{phaseLabel(step, day.rounds)}</p>
           <CountdownRing totalSeconds={step.seconds} secondsLeft={secondsLeft} color="#F0A345" />
           {step.nextLabel && (
-            <p className="text-sm text-[#7C8394] mt-6">ท่าถัดไป: <span className="text-[#EDEAE0]">{step.nextLabel}</span></p>
+            <p className="text-sm text-[#8A8178] mt-6">ท่าถัดไป: <span className="text-[#EDEAE0]">{step.nextLabel}</span></p>
           )}
           <button onClick={() => goToStep(stepIndex + 1)}
-            className="mt-8 min-h-[48px] px-6 text-sm text-[#7C8394]">
+            className="mt-8 min-h-[48px] px-6 text-sm text-[#8A8178]">
             ข้ามการพัก
           </button>
         </div>
@@ -385,18 +385,18 @@ export default function WorkoutPlayer({
   const progress = (step.globalIndex / step.totalExercise) * 100
 
   return (
-    <div className="min-h-screen bg-[#14171F] text-[#EDEAE0] flex flex-col">
+    <div className="min-h-screen bg-[#171412] text-[#EDEAE0] flex flex-col">
       <Header progress={progress} onExit={handleExitClick} />
 
       <div className="max-w-lg mx-auto w-full px-4 flex-1 flex flex-col pb-10">
         <div className="flex items-center justify-between mt-2 mb-4">
-          <p className="text-sm text-[#7C8394]">{phaseLabel(step, day.rounds)}</p>
-          <p className="text-xs text-[#7C8394]">ท่า {step.blockIndex + 1}/{step.blockTotal}</p>
+          <p className="text-sm text-[#8A8178]">{phaseLabel(step, day.rounds)}</p>
+          <p className="text-xs text-[#8A8178]">ท่า {step.blockIndex + 1}/{step.blockTotal}</p>
         </div>
 
         {ex.category && (
-          <span className="self-start text-[10px] px-2 py-0.5 rounded-full border border-[#2A2F3D]
-            text-[#7C8394] mb-2">
+          <span className="self-start text-[10px] px-2 py-0.5 rounded-full border border-[#332D28]
+            text-[#8A8178] mb-2">
             {CATEGORY_LABEL[ex.category]}
           </span>
         )}
@@ -412,12 +412,12 @@ export default function WorkoutPlayer({
               <div className="flex items-center gap-3 mt-6">
                 <button onClick={() => setPaused(p => !p)}
                   className="flex items-center gap-1.5 min-h-[48px] px-4 rounded-xl
-                    border border-[#2A2F3D] text-sm text-[#EDEAE0]">
+                    border border-[#332D28] text-sm text-[#EDEAE0]">
                   {paused ? <Play size={16} /> : <Pause size={16} />} {paused ? 'เล่นต่อ' : 'หยุดชั่วคราว'}
                 </button>
                 <button onClick={() => finishTimedEarly(step)}
                   className="flex items-center gap-1.5 min-h-[48px] px-4 rounded-xl
-                    bg-[#4FC1E0] text-[#14171F] text-sm font-semibold">
+                    bg-[#4FC1E0] text-[#171412] text-sm font-semibold">
                   <Check size={16} /> เสร็จแล้ว
                 </button>
               </div>
@@ -428,7 +428,7 @@ export default function WorkoutPlayer({
                 <p className="text-3xl font-bold text-[#4FC1E0] mb-8">{ex.reps_label}</p>
               )}
               <button onClick={() => completeExercise(step, 'done')}
-                className="w-full min-h-[56px] rounded-xl bg-[#4FC1E0] text-[#14171F]
+                className="w-full min-h-[56px] rounded-xl bg-[#4FC1E0] text-[#171412]
                   text-base font-semibold flex items-center justify-center gap-2">
                 <Check size={18} /> ทำเสร็จแล้ว ถัดไป
               </button>
@@ -437,7 +437,7 @@ export default function WorkoutPlayer({
         </div>
 
         <button onClick={() => completeExercise(step, 'skip')}
-          className="flex items-center justify-center gap-1.5 min-h-[48px] mt-4 text-sm text-[#7C8394]">
+          className="flex items-center justify-center gap-1.5 min-h-[48px] mt-4 text-sm text-[#8A8178]">
           <SkipForward size={14} /> ข้ามท่านี้
         </button>
       </div>
@@ -447,12 +447,12 @@ export default function WorkoutPlayer({
 
 function Header({ progress, onExit }: { progress: number; onExit: () => void }) {
   return (
-    <div className="sticky top-0 bg-[#14171F] z-10">
+    <div className="sticky top-0 bg-[#171412] z-10">
       <div className="max-w-lg mx-auto w-full px-4 pt-4 pb-2 flex items-center justify-between">
-        <div className="h-1.5 flex-1 bg-[#2A2F3D] rounded-full overflow-hidden mr-3">
+        <div className="h-1.5 flex-1 bg-[#332D28] rounded-full overflow-hidden mr-3">
           <div className="h-full bg-[#4FC1E0] rounded-full transition-all" style={{ width: `${progress}%` }} />
         </div>
-        <button onClick={onExit} className="flex items-center gap-1 text-xs text-[#7C8394] flex-shrink-0">
+        <button onClick={onExit} className="flex items-center gap-1 text-xs text-[#8A8178] flex-shrink-0">
           <X size={14} /> จบตอนนี้
         </button>
       </div>

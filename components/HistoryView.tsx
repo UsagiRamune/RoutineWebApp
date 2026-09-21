@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 // หน้าประวัติ: กราฟ (week/month/year), drill-down รายวัน,
 // แก้/ลบ session ย้อนหลัง, บันทึกน้ำหนัก, สตรีค
@@ -216,23 +216,23 @@ export default function HistoryView({
   }
 
   return (
-    <main className="min-h-screen bg-[#14171F] text-[#EDEAE0] pb-16">
+    <main className="min-h-screen bg-[#171412] text-[#EDEAE0] pb-16">
       <div className="max-w-3xl mx-auto px-4 pt-8">
 
         {/* header + toggle */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <Link href="/" className="p-2 rounded-lg border border-[#2A2F3D] text-[#7C8394]">
+            <Link href="/" className="p-2 rounded-lg border border-[#332D28] text-[#8A8178]">
               <ArrowLeft size={18} />
             </Link>
             <h1 className="text-xl font-semibold">ประวัติ</h1>
           </div>
-          <div className="flex rounded-lg border border-[#2A2F3D] overflow-hidden text-xs">
+          <div className="flex rounded-lg border border-[#332D28] overflow-hidden text-xs">
             {(['week', 'month', 'year'] as const).map(v => (
               <Link key={v} href={`/history?view=${v}`}
                 className={`px-3 py-1.5 ${view === v
-                  ? 'bg-[#EDEAE0] text-[#14171F] font-semibold'
-                  : 'text-[#7C8394]'}`}>
+                  ? 'bg-[#EDEAE0] text-[#171412] font-semibold'
+                  : 'text-[#8A8178]'}`}>
                 {v === 'week' ? 'สัปดาห์' : v === 'month' ? 'เดือน' : 'ปี'}
               </Link>
             ))}
@@ -240,8 +240,8 @@ export default function HistoryView({
         </div>
 
         {/* chart */}
-        <div className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4 mb-4">
-          <p className="text-xs text-[#7C8394] mb-2">
+        <div className="bg-[#201C19] border border-[#332D28] rounded-xl p-4 mb-4">
+          <p className="text-xs text-[#8A8178] mb-2">
             ชั่วโมงที่จับเวลา
             {metrics.length > 0 && ' + น้ำหนัก (เส้นม่วง)'}
             {foodEntries.length > 0 && ' + แคลอรี่ (เส้นส้ม)'}
@@ -255,11 +255,11 @@ export default function HistoryView({
                     if (found) setSelectedDay(found.key)
                   }
                 }}>
-                <CartesianGrid stroke="#2A2F3D" vertical={false} />
-                <XAxis dataKey="label" stroke="#7C8394" fontSize={10}
+                <CartesianGrid stroke="#332D28" vertical={false} />
+                <XAxis dataKey="label" stroke="#8A8178" fontSize={10}
                   tickLine={false} axisLine={false}
                   interval={view === 'month' ? 4 : 0} />
-                <YAxis yAxisId="h" stroke="#7C8394" fontSize={10}
+                <YAxis yAxisId="h" stroke="#8A8178" fontSize={10}
                   tickLine={false} axisLine={false} width={26} />
                 <YAxis yAxisId="w" orientation="right" stroke="#9B7EDE"
                   fontSize={10} tickLine={false} axisLine={false} width={30}
@@ -269,7 +269,7 @@ export default function HistoryView({
                 <Tooltip
                   position={{ y: 10 }}
                   isAnimationActive={false}
-                  contentStyle={{ background: '#1B1F2A', border: '1px solid #2A2F3D',
+                  contentStyle={{ background: '#201C19', border: '1px solid #332D28',
                     borderRadius: 8, fontSize: 12 }}
                   labelStyle={{ color: '#EDEAE0' }} />
                 <Bar yAxisId="h" dataKey="hours" name="ชม."
@@ -282,19 +282,19 @@ export default function HistoryView({
             </ResponsiveContainer>
           </div>
           {view !== 'year' && (
-            <p className="text-[10px] text-[#7C8394] mt-1">แตะแท่งเพื่อดูรายละเอียดวันนั้น</p>
+            <p className="text-[10px] text-[#8A8178] mt-1">แตะแท่งเพื่อดูรายละเอียดวันนั้น</p>
           )}
         </div>
 
         {/* streaks */}
         {streaks.length > 0 && (
-          <div className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4 mb-4">
-            <p className="text-xs text-[#7C8394] mb-2">สตรีค</p>
+          <div className="bg-[#201C19] border border-[#332D28] rounded-xl p-4 mb-4">
+            <p className="text-xs text-[#8A8178] mb-2">สตรีค</p>
             <div className="flex flex-wrap gap-2">
               {streaks.map(s => (
                 <span key={s.name}
                   className="flex items-center gap-1.5 text-xs px-2.5 py-1.5
-                    rounded-lg border border-[#2A2F3D]">
+                    rounded-lg border border-[#332D28]">
                   <Flame size={12} style={{ color: s.color }} />
                   {s.name} <b>{s.days} วัน</b>
                 </span>
@@ -304,12 +304,12 @@ export default function HistoryView({
         )}
 
         {/* AI analysis */}
-        <div className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4 mb-4">
+        <div className="bg-[#201C19] border border-[#332D28] rounded-xl p-4 mb-4">
           <div className="flex items-center justify-between">
-            <p className="text-xs text-[#7C8394]">วิเคราะห์ด้วย AI</p>
+            <p className="text-xs text-[#8A8178]">วิเคราะห์ด้วย AI</p>
             <button onClick={analyze} disabled={aiState === 'loading'}
               className="text-xs font-semibold px-3 py-1.5 rounded-lg
-                bg-[#EDEAE0] text-[#14171F] disabled:opacity-50">
+                bg-[#EDEAE0] text-[#171412] disabled:opacity-50">
               {aiState === 'loading' ? 'กำลังวิเคราะห์...'
                 : `วิเคราะห์ช่วง${view === 'week' ? 'สัปดาห์' : view === 'month' ? 'เดือน' : '90 วัน'}`}
             </button>
@@ -329,23 +329,23 @@ export default function HistoryView({
 
         {/* day drill-down */}
         {selectedDay && (
-          <div className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4 mb-4">
+          <div className="bg-[#201C19] border border-[#332D28] rounded-xl p-4 mb-4">
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-medium">
                 {new Date(selectedDay).toLocaleDateString('th-TH',
                   { weekday: 'long', day: 'numeric', month: 'long', timeZone: TZ })}
               </p>
               <button onClick={() => setSelectedDay(null)}
-                className="text-[#7C8394]"><X size={16} /></button>
+                className="text-[#8A8178]"><X size={16} /></button>
             </div>
 
             {dayEntries.length === 0 && dayCompletions.length === 0
               && dayFood.length === 0 && dayWater.length === 0 && (
-              <p className="text-xs text-[#7C8394]">วันนี้ไม่มีบันทึก</p>
+              <p className="text-xs text-[#8A8178]">วันนี้ไม่มีบันทึก</p>
             )}
 
             {(dayFood.length > 0 || dayWater.length > 0) && (
-              <p className="text-xs text-[#7C8394] mb-2">
+              <p className="text-xs text-[#8A8178] mb-2">
                 โภชนาการ: {Math.round(dayNutTotals.cal)} kcal
                 {' '}(P{dayNutTotals.protein.toFixed(0)} C{dayNutTotals.carbs.toFixed(0)} F{dayNutTotals.fat.toFixed(0)})
                 {dayWater.length > 0 && (
@@ -356,18 +356,18 @@ export default function HistoryView({
             )}
 
             {dayEntries.map(e => (
-              <div key={e.id} className="group border-t border-[#2A2F3D] py-2">
+              <div key={e.id} className="group border-t border-[#332D28] py-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm">{e.routines?.name ?? '?'}</span>
                   <input type="time" defaultValue={fmtHHMM(e.clock_in)}
                     onBlur={ev => editEntryTime(e, 'clock_in', ev.target.value)}
-                    className="bg-[#14171F] border border-[#2A2F3D] rounded px-2 py-0.5
+                    className="bg-[#171412] border border-[#332D28] rounded px-2 py-0.5
                       text-xs outline-none" />
-                  <span className="text-xs text-[#7C8394]">–</span>
+                  <span className="text-xs text-[#8A8178]">–</span>
                   <input type="time"
                     defaultValue={e.clock_out ? fmtHHMM(e.clock_out) : ''}
                     onBlur={ev => editEntryTime(e, 'clock_out', ev.target.value)}
-                    className="bg-[#14171F] border border-[#2A2F3D] rounded px-2 py-0.5
+                    className="bg-[#171412] border border-[#332D28] rounded px-2 py-0.5
                       text-xs outline-none" />
                   {entryError?.id === e.id && (
                     <p className="w-full text-[10px] text-[#E4574A]">{entryError.message}</p>
@@ -382,33 +382,33 @@ export default function HistoryView({
                 {e.details.map(topic => (
                   <div key={topic.id} className="ml-2 mt-1">
                     <div className="group flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#7C8394] flex-shrink-0" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#8A8178] flex-shrink-0" />
                       <input defaultValue={topic.title}
                         onBlur={ev => ev.target.value !== topic.title && saveDetails(e.id,
                           e.details.map(t => t.id === topic.id
                             ? { ...t, title: ev.target.value } : t))}
                         className="flex-1 min-w-0 bg-transparent text-sm outline-none
-                          border-b border-transparent focus:border-[#2A2F3D]" />
+                          border-b border-transparent focus:border-[#332D28]" />
                       <button onClick={() => saveDetails(e.id,
                         e.details.filter(t => t.id !== topic.id))}
-                        className={`text-[#7C8394] p-1 w-7 flex justify-center flex-shrink-0 ${DELETE_HOVER_REVEAL}`}>
+                        className={`text-[#8A8178] p-1 w-7 flex justify-center flex-shrink-0 ${DELETE_HOVER_REVEAL}`}>
                         <X size={14} />
                       </button>
                     </div>
                     {topic.subs.map(sub => (
                       <div key={sub.id} className="group flex items-center gap-1.5">
-                        <span className="text-[#7C8394] text-xs ml-5">•</span>
+                        <span className="text-[#8A8178] text-xs ml-5">•</span>
                         <input defaultValue={sub.text}
                           onBlur={ev => ev.target.value !== sub.text && saveDetails(e.id,
                             e.details.map(t => t.id === topic.id
                               ? { ...t, subs: t.subs.map(s => s.id === sub.id
                                   ? { ...s, text: ev.target.value } : s) } : t))}
                           className="flex-1 min-w-0 bg-transparent text-xs outline-none
-                            border-b border-transparent focus:border-[#2A2F3D]" />
+                            border-b border-transparent focus:border-[#332D28]" />
                         <button onClick={() => saveDetails(e.id,
                           e.details.map(t => t.id === topic.id
                             ? { ...t, subs: t.subs.filter(s => s.id !== sub.id) } : t))}
-                          className={`text-[#7C8394] p-1 w-7 flex justify-center flex-shrink-0 ${DELETE_HOVER_REVEAL}`}>
+                          className={`text-[#8A8178] p-1 w-7 flex justify-center flex-shrink-0 ${DELETE_HOVER_REVEAL}`}>
                           <X size={14} />
                         </button>
                       </div>
@@ -419,8 +419,8 @@ export default function HistoryView({
             ))}
 
             {dayCompletions.length > 0 && (
-              <div className="border-t border-[#2A2F3D] pt-2 mt-1">
-                <p className="text-xs text-[#7C8394] mb-1">
+              <div className="border-t border-[#332D28] pt-2 mt-1">
+                <p className="text-xs text-[#8A8178] mb-1">
                   Checklist ({dayCompletions.length} รายการ)
                 </p>
                 <p className="text-xs">

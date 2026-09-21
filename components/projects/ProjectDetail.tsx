@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 // หน้ารายละเอียดโปรเจกต์: แก้ header, progress, field/task (+subtask/work log/กำหนดส่ง), GDD, และสรุป routine ที่ผูกไว้
 import { useEffect, useRef, useState } from 'react'
@@ -63,7 +63,7 @@ function relativeTime(iso: string): string {
 function DueRemaining({ dueDate, today }: { dueDate: string; today: string }) {
   const days = daysUntil(dueDate, today)
   return (
-    <span className={`text-[10px] ${days < 0 ? 'text-[#E4574A]' : 'text-[#7C8394]'}`}>
+    <span className={`text-[10px] ${days < 0 ? 'text-[#E4574A]' : 'text-[#8A8178]'}`}>
       {daysUntilLabel(days)}
     </span>
   )
@@ -304,34 +304,34 @@ export default function ProjectDetail({ project, docs, linkedRoutines, weekStart
   const totalWorkMinutes = projectWorkMinutes(project.project_fields)
 
   return (
-    <main className="min-h-screen bg-[#14171F] text-[#EDEAE0] pb-16">
+    <main className="min-h-screen bg-[#171412] text-[#EDEAE0] pb-16">
       <div className="max-w-3xl mx-auto px-4 pt-8">
 
-        <Link href="/projects" className="flex items-center gap-1.5 text-sm text-[#7C8394] mb-4">
+        <Link href="/projects" className="flex items-center gap-1.5 text-sm text-[#8A8178] mb-4">
           <ArrowLeft size={16} /> โปรเจกต์
         </Link>
 
         {/* header */}
-        <div className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4 mb-4 space-y-3">
+        <div className="bg-[#201C19] border border-[#332D28] rounded-xl p-4 mb-4 space-y-3">
           <input defaultValue={project.name}
             onBlur={e => {
               const v = e.target.value.trim()
               if (v && v !== project.name) updateProject({ name: v })
             }}
             className="w-full text-lg font-semibold bg-transparent outline-none
-              border-b border-transparent focus:border-[#2A2F3D] pb-1" />
+              border-b border-transparent focus:border-[#332D28] pb-1" />
 
           <div className="flex items-center gap-3 flex-wrap">
             <select defaultValue={project.status}
               onChange={e => updateProject({ status: e.target.value })}
-              className="bg-[#14171F] border border-[#2A2F3D] rounded-lg px-2 py-1.5 text-xs outline-none">
+              className="bg-[#171412] border border-[#332D28] rounded-lg px-2 py-1.5 text-xs outline-none">
               {STATUS_OPTIONS.map(s => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
             </select>
             <div className="flex items-center gap-1.5">
-              <label className="text-xs text-[#7C8394]">กำหนดเสร็จ</label>
+              <label className="text-xs text-[#8A8178]">กำหนดเสร็จ</label>
               <input type="date" defaultValue={project.target_date ?? ''}
                 onBlur={e => saveDueDate('project', project.id, e.target.value || null)}
-                className="bg-[#14171F] border border-[#2A2F3D] rounded-lg px-2 py-1.5 text-xs outline-none" />
+                className="bg-[#171412] border border-[#332D28] rounded-lg px-2 py-1.5 text-xs outline-none" />
               {project.target_date && <DueRemaining dueDate={project.target_date} today={today} />}
             </div>
             <button onClick={deleteProject}
@@ -339,43 +339,43 @@ export default function ProjectDetail({ project, docs, linkedRoutines, weekStart
               <Trash2 size={12} /> ลบโปรเจกต์
             </button>
           </div>
-          {!hasGoogleCalendar && <p className="text-[10px] text-[#7C8394]">{NO_CALENDAR_HINT}</p>}
+          {!hasGoogleCalendar && <p className="text-[10px] text-[#8A8178]">{NO_CALENDAR_HINT}</p>}
 
           <textarea defaultValue={project.description ?? ''} placeholder="รายละเอียดโปรเจกต์..." rows={2}
             onBlur={e => updateProject({ description: e.target.value || null })}
-            className="w-full bg-[#14171F] border border-[#2A2F3D] rounded-lg
-              px-3 py-2 text-sm outline-none focus:border-[#7C8394] resize-none" />
+            className="w-full bg-[#171412] border border-[#332D28] rounded-lg
+              px-3 py-2 text-sm outline-none focus:border-[#8A8178] resize-none" />
         </div>
 
         {/* progress */}
-        <div className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4 mb-4">
-          <div className="flex items-center justify-between text-xs text-[#7C8394] mb-1.5">
+        <div className="bg-[#201C19] border border-[#332D28] rounded-xl p-4 mb-4">
+          <div className="flex items-center justify-between text-xs text-[#8A8178] mb-1.5">
             <span>ความคืบหน้ารวม</span>
             <span>{overall.total > 0 ? `${overall.done}/${overall.total} (${overallPct}%)` : 'ยังไม่มี task'}</span>
           </div>
-          <div className="h-2 bg-[#14171F] rounded-full overflow-hidden">
+          <div className="h-2 bg-[#171412] rounded-full overflow-hidden">
             <div className="h-full rounded-full bg-[#4FC1E0] transition-all" style={{ width: `${overallPct}%` }} />
           </div>
           {totalWorkMinutes > 0 && (
-            <p className="text-[10px] text-[#7C8394] mt-1.5">
+            <p className="text-[10px] text-[#8A8178] mt-1.5">
               เวลาทำงานที่บันทึกรวม: {fmtDuration(totalWorkMinutes)}
             </p>
           )}
 
           {project.project_fields.length > 1 && (
-            <div className="space-y-1.5 mt-3 pt-3 border-t border-[#2A2F3D]">
+            <div className="space-y-1.5 mt-3 pt-3 border-t border-[#332D28]">
               {project.project_fields.map(f => {
                 const fp = progressPct(projectProgress([f]))
                 const fMins = fieldWorkMinutes(f)
                 return (
                   <div key={f.id} className="flex items-center gap-2">
-                    <span className="text-xs text-[#7C8394] w-20 truncate flex-shrink-0">{f.name}</span>
-                    <div className="flex-1 h-1.5 bg-[#14171F] rounded-full overflow-hidden">
+                    <span className="text-xs text-[#8A8178] w-20 truncate flex-shrink-0">{f.name}</span>
+                    <div className="flex-1 h-1.5 bg-[#171412] rounded-full overflow-hidden">
                       <div className="h-full rounded-full transition-all" style={{ width: `${fp}%`, background: f.color }} />
                     </div>
-                    <span className="text-[10px] text-[#7C8394] w-8 text-right flex-shrink-0">{fp}%</span>
+                    <span className="text-[10px] text-[#8A8178] w-8 text-right flex-shrink-0">{fp}%</span>
                     {fMins > 0 && (
-                      <span className="text-[10px] text-[#7C8394] flex-shrink-0">{fmtDuration(fMins)}</span>
+                      <span className="text-[10px] text-[#8A8178] flex-shrink-0">{fmtDuration(fMins)}</span>
                     )}
                   </div>
                 )
@@ -395,25 +395,25 @@ export default function ProjectDetail({ project, docs, linkedRoutines, weekStart
                 return (
                   <SortableField key={field.id} id={field.id}>
                     {({ attributes, listeners, setActivatorNodeRef, isDragging }) => (
-                      <div className={`bg-[#1B1F2A] border rounded-xl p-4 transition-shadow
-                        ${isDragging ? 'border-[#7C8394] shadow-xl' : 'border-[#2A2F3D]'}`}>
+                      <div className={`bg-[#201C19] border rounded-xl p-4 transition-shadow
+                        ${isDragging ? 'border-[#8A8178] shadow-xl' : 'border-[#332D28]'}`}>
                         <div className="flex items-center gap-2 mb-2">
                           <button ref={setActivatorNodeRef} {...attributes} {...listeners}
                             className="w-10 h-10 -m-2.5 flex items-center justify-center flex-shrink-0
-                              text-[#7C8394] cursor-grab active:cursor-grabbing touch-none"
+                              text-[#8A8178] cursor-grab active:cursor-grabbing touch-none"
                             aria-label="ลากจัดลำดับ field">
                             <GripVertical size={16} />
                           </button>
-                          <button onClick={() => toggleCollapse(field.id)} className="text-[#7C8394] p-1 flex-shrink-0">
+                          <button onClick={() => toggleCollapse(field.id)} className="text-[#8A8178] p-1 flex-shrink-0">
                             {collapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
                           </button>
                           <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: field.color }} />
                           <input defaultValue={field.name}
                             onBlur={e => renameField(field.id, e.target.value)}
                             className="flex-1 min-w-0 bg-transparent text-sm font-medium outline-none
-                              border-b border-transparent focus:border-[#2A2F3D]" />
+                              border-b border-transparent focus:border-[#332D28]" />
                           <button onClick={() => deleteField(field.id, field.name)}
-                            className="text-[#7C8394] p-1 w-7 flex justify-center flex-shrink-0">
+                            className="text-[#8A8178] p-1 w-7 flex justify-center flex-shrink-0">
                             <Trash2 size={13} />
                           </button>
                         </div>
@@ -427,15 +427,15 @@ export default function ProjectDetail({ project, docs, linkedRoutines, weekStart
                                     className="w-5 h-5 rounded-full flex-shrink-0"
                                     style={{
                                       background: c,
-                                      boxShadow: field.color === c ? '0 0 0 2px #14171F, 0 0 0 3.5px #EDEAE0' : 'none',
+                                      boxShadow: field.color === c ? '0 0 0 2px #171412, 0 0 0 3.5px #EDEAE0' : 'none',
                                     }} />
                                 ))}
                               </div>
                               <div className="flex items-center gap-1.5">
-                                <label className="text-[10px] text-[#7C8394]">กำหนดส่ง</label>
+                                <label className="text-[10px] text-[#8A8178]">กำหนดส่ง</label>
                                 <input type="date" defaultValue={field.due_date ?? ''}
                                   onBlur={e => saveDueDate('field', field.id, e.target.value || null)}
-                                  className="bg-[#14171F] border border-[#2A2F3D] rounded-lg px-2 py-1 text-[11px] outline-none" />
+                                  className="bg-[#171412] border border-[#332D28] rounded-lg px-2 py-1 text-[11px] outline-none" />
                                 {field.due_date && <DueRemaining dueDate={field.due_date} today={today} />}
                               </div>
                             </div>
@@ -453,23 +453,23 @@ export default function ProjectDetail({ project, docs, linkedRoutines, weekStart
                                     <button onClick={() => cycleStatus(task.id, status)}
                                       className={`w-5 h-5 rounded-md flex-shrink-0 flex items-center justify-center
                                         text-[10px] font-bold transition-colors
-                                        ${status === 'done' ? 'bg-[#4FC1E0] text-[#14171F]'
-                                          : status === 'doing' ? 'bg-[#F0A345] text-[#14171F]'
-                                          : 'border-2 border-[#7C8394]'}`}>
+                                        ${status === 'done' ? 'bg-[#4FC1E0] text-[#171412]'
+                                          : status === 'doing' ? 'bg-[#F0A345] text-[#171412]'
+                                          : 'border-2 border-[#8A8178]'}`}>
                                       {status === 'done' ? '✓' : status === 'doing' ? '●' : ''}
                                     </button>
                                     <input defaultValue={task.title}
                                       onBlur={e => e.target.value.trim() && e.target.value !== task.title &&
                                         updateTask(task.id, 'title', e.target.value.trim())}
                                       className={`flex-1 min-w-0 bg-transparent text-sm outline-none
-                                        border-b border-transparent focus:border-[#2A2F3D]
-                                        ${status === 'done' ? 'text-[#7C8394] line-through' : ''}`} />
+                                        border-b border-transparent focus:border-[#332D28]
+                                        ${status === 'done' ? 'text-[#8A8178] line-through' : ''}`} />
                                     <button onClick={() => setOpenDetail(p => ({ ...p, [task.id]: !p[task.id] }))}
-                                      className="text-[10px] text-[#7C8394] p-1 flex-shrink-0">
+                                      className="text-[10px] text-[#8A8178] p-1 flex-shrink-0">
                                       {detailOpen ? 'ซ่อน' : '+ รายละเอียด'}
                                     </button>
                                     <button onClick={() => deleteTask(task.id)}
-                                      className="text-[#7C8394] p-1 w-7 flex justify-center flex-shrink-0">
+                                      className="text-[#8A8178] p-1 w-7 flex justify-center flex-shrink-0">
                                       <X size={13} />
                                     </button>
                                   </div>
@@ -477,31 +477,31 @@ export default function ProjectDetail({ project, docs, linkedRoutines, weekStart
                                   {/* แถวเมตา: กำหนดส่ง + เวลารวม + sub-task + จับเวลา — โชว์ตลอด ไม่ซ่อนใน toggle
                                       (เดิม due_date อยู่ในนี้ ทำให้มองไม่เห็นถ้ายังไม่เคยตั้ง — ย้ายออกมาให้เห็นเสมอ) */}
                                   <div className="flex items-center gap-2 flex-wrap mt-1 ml-7">
-                                    <label className="text-[10px] text-[#7C8394]">กำหนดส่ง</label>
+                                    <label className="text-[10px] text-[#8A8178]">กำหนดส่ง</label>
                                     <input type="date" defaultValue={task.due_date ?? ''}
                                       onBlur={e => saveDueDate('task', task.id, e.target.value || null)}
-                                      className="bg-[#14171F] border border-[#2A2F3D] rounded-lg
+                                      className="bg-[#171412] border border-[#332D28] rounded-lg
                                         px-2 py-1 text-[11px] outline-none" />
                                     {task.due_date && <DueRemaining dueDate={task.due_date} today={today} />}
                                     {workMins > 0 && (
-                                      <span className="text-[10px] text-[#7C8394] flex-shrink-0">{fmtDuration(workMins)}</span>
+                                      <span className="text-[10px] text-[#8A8178] flex-shrink-0">{fmtDuration(workMins)}</span>
                                     )}
                                     <button onClick={() => setOpenSubtasks(p => ({ ...p, [task.id]: !p[task.id] }))}
-                                      className="flex items-center text-[10px] text-[#7C8394] px-1.5 py-0.5 rounded-full
-                                        border border-[#2A2F3D] flex-shrink-0">
+                                      className="flex items-center text-[10px] text-[#8A8178] px-1.5 py-0.5 rounded-full
+                                        border border-[#332D28] flex-shrink-0">
                                       {subtaskTotal > 0 ? `${subtaskDone}/${subtaskTotal}` : <ListChecks size={11} />}
                                     </button>
                                     <TaskWorkLog taskId={task.id} workLogs={task.project_work_logs} />
                                   </div>
                                   {task.due_date && !hasGoogleCalendar && (
-                                    <p className="text-[10px] text-[#7C8394] mt-0.5 ml-7">{NO_CALENDAR_HINT}</p>
+                                    <p className="text-[10px] text-[#8A8178] mt-0.5 ml-7">{NO_CALENDAR_HINT}</p>
                                   )}
 
                                   {detailOpen && (
                                     <div className="mt-1 ml-7">
                                       <textarea defaultValue={task.detail ?? ''} placeholder="รายละเอียด..." rows={2}
                                         onBlur={e => updateTask(task.id, 'detail', e.target.value)}
-                                        className="w-full bg-[#14171F] border border-[#2A2F3D] rounded-lg
+                                        className="w-full bg-[#171412] border border-[#332D28] rounded-lg
                                           px-2 py-1.5 text-xs outline-none resize-none" />
                                     </div>
                                   )}
@@ -518,15 +518,15 @@ export default function ProjectDetail({ project, docs, linkedRoutines, weekStart
                                               <button onClick={() => toggleSubtask(sub.id, done)}
                                                 className={`w-4 h-4 rounded flex-shrink-0 flex items-center justify-center
                                                   text-[9px] font-bold
-                                                  ${done ? 'bg-[#4FC1E0] text-[#14171F]' : 'border-2 border-[#7C8394]'}`}>
+                                                  ${done ? 'bg-[#4FC1E0] text-[#171412]' : 'border-2 border-[#8A8178]'}`}>
                                                 {done ? '✓' : ''}
                                               </button>
                                               <span className={`flex-1 min-w-0 text-xs truncate
-                                                ${done ? 'text-[#7C8394] line-through' : ''}`}>
+                                                ${done ? 'text-[#8A8178] line-through' : ''}`}>
                                                 {sub.title}
                                               </span>
                                               <button onClick={() => deleteSubtask(sub.id)}
-                                                className="text-[#7C8394] p-0.5 flex-shrink-0">
+                                                className="text-[#8A8178] p-0.5 flex-shrink-0">
                                                 <X size={11} />
                                               </button>
                                             </div>
@@ -535,8 +535,8 @@ export default function ProjectDetail({ project, docs, linkedRoutines, weekStart
                                       <input value={newSubtaskTitle[task.id] ?? ''} placeholder="+ เพิ่ม sub-task"
                                         onChange={e => setNewSubtaskTitle(p => ({ ...p, [task.id]: e.target.value }))}
                                         onKeyDown={e => e.key === 'Enter' && addSubtask(task.id, task.project_subtasks.length)}
-                                        className="w-full bg-transparent border border-dashed border-[#2A2F3D]
-                                          rounded-lg px-2 py-1 text-xs outline-none focus:border-[#7C8394]" />
+                                        className="w-full bg-transparent border border-dashed border-[#332D28]
+                                          rounded-lg px-2 py-1 text-xs outline-none focus:border-[#8A8178]" />
                                     </div>
                                   )}
                                 </div>
@@ -547,8 +547,8 @@ export default function ProjectDetail({ project, docs, linkedRoutines, weekStart
                               <input value={newTaskTitle[field.id] ?? ''} placeholder="+ เพิ่ม task..."
                                 onChange={e => setNewTaskTitle(p => ({ ...p, [field.id]: e.target.value }))}
                                 onKeyDown={e => e.key === 'Enter' && addTask(field.id, field.project_tasks.length)}
-                                className="flex-1 bg-[#14171F] border border-dashed border-[#2A2F3D] rounded-lg
-                                  px-3 py-1.5 text-sm outline-none focus:border-[#7C8394]" />
+                                className="flex-1 bg-[#171412] border border-dashed border-[#332D28] rounded-lg
+                                  px-3 py-1.5 text-sm outline-none focus:border-[#8A8178]" />
                             </div>
                           </>
                         )}
@@ -564,18 +564,18 @@ export default function ProjectDetail({ project, docs, linkedRoutines, weekStart
             <input value={newFieldName} placeholder="+ เพิ่ม field..."
               onChange={e => setNewFieldName(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && addField()}
-              className="flex-1 bg-transparent border border-dashed border-[#2A2F3D]
-                rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#7C8394]" />
+              className="flex-1 bg-transparent border border-dashed border-[#332D28]
+                rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#8A8178]" />
           </div>
         </div>
 
         {/* GDD */}
-        <div className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4 mb-4">
+        <div className="bg-[#201C19] border border-[#332D28] rounded-xl p-4 mb-4">
           <button onClick={() => setGddOpen(v => !v)}
             className="w-full flex items-center justify-between">
             <span className="text-sm font-medium flex items-center gap-1.5">
               {gddOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />} GDD / เอกสาร
-              {docs.length > 0 && <span className="text-[10px] text-[#7C8394]">({docs.length})</span>}
+              {docs.length > 0 && <span className="text-[10px] text-[#8A8178]">({docs.length})</span>}
             </span>
           </button>
 
@@ -584,7 +584,7 @@ export default function ProjectDetail({ project, docs, linkedRoutines, weekStart
               {docs.map(doc => {
                 const open = !!openDocs[doc.id]
                 return (
-                  <div key={doc.id} className="border border-[#2A2F3D] rounded-lg p-3">
+                  <div key={doc.id} className="border border-[#332D28] rounded-lg p-3">
                     <button onClick={() => setOpenDocs(p => ({ ...p, [doc.id]: !p[doc.id] }))}
                       className="w-full flex items-center justify-between gap-2">
                       <span className="flex items-center gap-1.5 min-w-0 flex-1">
@@ -592,12 +592,12 @@ export default function ProjectDetail({ project, docs, linkedRoutines, weekStart
                           : <ChevronDown size={12} className="flex-shrink-0" />}
                         <span className="text-sm truncate">{doc.title}</span>
                         {doc.source_type === 'upload' && doc.original_filename && (
-                          <span className="text-[10px] text-[#7C8394] flex-shrink-0 truncate max-w-[8rem]">
+                          <span className="text-[10px] text-[#8A8178] flex-shrink-0 truncate max-w-[8rem]">
                             📄 {doc.original_filename}
                           </span>
                         )}
                       </span>
-                      <span className="text-[10px] text-[#7C8394] flex-shrink-0">{relativeTime(doc.updated_at)}</span>
+                      <span className="text-[10px] text-[#8A8178] flex-shrink-0">{relativeTime(doc.updated_at)}</span>
                     </button>
 
                     {open && (
@@ -612,9 +612,9 @@ export default function ProjectDetail({ project, docs, linkedRoutines, weekStart
                               }
                             }}
                             className="flex-1 min-w-0 bg-transparent text-sm font-medium outline-none
-                              border-b border-transparent focus:border-[#2A2F3D]" />
+                              border-b border-transparent focus:border-[#332D28]" />
                           <button onClick={() => deleteDoc(doc.id, doc.title)}
-                            className="text-[#7C8394] p-1 flex-shrink-0">
+                            className="text-[#8A8178] p-1 flex-shrink-0">
                             <Trash2 size={13} />
                           </button>
                         </div>
@@ -622,9 +622,9 @@ export default function ProjectDetail({ project, docs, linkedRoutines, weekStart
                           placeholder="เขียนเอกสารที่นี่ (รองรับ markdown)..."
                           onBlur={e => supabase.from('project_docs')
                             .update({ content: e.target.value, updated_at: new Date().toISOString() }).eq('id', doc.id)}
-                          className="w-full bg-[#14171F] border border-[#2A2F3D] rounded-lg
-                            px-3 py-2 text-sm outline-none focus:border-[#7C8394] resize-none font-mono" />
-                        <div className="text-sm leading-relaxed pt-3 border-t border-[#2A2F3D]
+                          className="w-full bg-[#171412] border border-[#332D28] rounded-lg
+                            px-3 py-2 text-sm outline-none focus:border-[#8A8178] resize-none font-mono" />
+                        <div className="text-sm leading-relaxed pt-3 border-t border-[#332D28]
                           [&_h3]:font-semibold [&_h3]:mt-3 [&_h3]:mb-1
                           [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-0.5
                           [&_p]:mb-2 [&_strong]:font-semibold">
@@ -639,12 +639,12 @@ export default function ProjectDetail({ project, docs, linkedRoutines, weekStart
               <div className="flex gap-2">
                 <button onClick={addBlankDoc} disabled={uploading}
                   className="flex-1 flex items-center justify-center gap-1.5 border border-dashed
-                    border-[#2A2F3D] rounded-lg px-3 py-2 text-xs text-[#7C8394] disabled:opacity-50">
+                    border-[#332D28] rounded-lg px-3 py-2 text-xs text-[#8A8178] disabled:opacity-50">
                   <Plus size={13} /> เอกสารใหม่
                 </button>
                 <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
                   className="flex-1 flex items-center justify-center gap-1.5 border border-dashed
-                    border-[#2A2F3D] rounded-lg px-3 py-2 text-xs text-[#7C8394] disabled:opacity-50">
+                    border-[#332D28] rounded-lg px-3 py-2 text-xs text-[#8A8178] disabled:opacity-50">
                   {uploading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
                   {uploading ? 'กำลังประมวลผล...' : 'อัปโหลดไฟล์'}
                 </button>
@@ -652,7 +652,7 @@ export default function ProjectDetail({ project, docs, linkedRoutines, weekStart
                   onChange={e => e.target.files?.[0] && handleFileChosen(e.target.files[0])} />
               </div>
               {uploading && (
-                <p className="text-[10px] text-[#7C8394] flex items-center gap-1">
+                <p className="text-[10px] text-[#8A8178] flex items-center gap-1">
                   <Loader2 size={10} className="animate-spin flex-shrink-0" />
                   {uploadStatusText()} ({uploadElapsed} วิ)
                 </p>
@@ -662,8 +662,8 @@ export default function ProjectDetail({ project, docs, linkedRoutines, weekStart
         </div>
 
         {/* linked routine */}
-        <div className="bg-[#1B1F2A] border border-[#2A2F3D] rounded-xl p-4">
-          <p className="text-xs text-[#7C8394] mb-2">การ track เวลา</p>
+        <div className="bg-[#201C19] border border-[#332D28] rounded-xl p-4">
+          <p className="text-xs text-[#8A8178] mb-2">การ track เวลา</p>
           {linkedRoutines.length > 0 ? (
             <div className="space-y-1">
               {linkedRoutines.map(r => (
@@ -674,7 +674,7 @@ export default function ProjectDetail({ project, docs, linkedRoutines, weekStart
               ))}
             </div>
           ) : (
-            <p className="text-xs text-[#7C8394]">
+            <p className="text-xs text-[#8A8178]">
               ผูก routine งานหลักเข้าโปรเจกต์นี้ได้ที่หน้า Routine (แก้ routine → เลือกโปรเจกต์)
             </p>
           )}
