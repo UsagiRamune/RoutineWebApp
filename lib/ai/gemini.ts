@@ -1,5 +1,5 @@
 // AI provider: Gemini (ฟรี tier — 15 RPM / 500 RPD เหลือเฟือ)
-import { GoogleGenerativeAI, GoogleGenerativeAIFetchError, Part } from '@google/generative-ai'
+import { GoogleGenerativeAI, GoogleGenerativeAIAbortError, GoogleGenerativeAIFetchError, Part } from '@google/generative-ai'
 import { AiProvider, AnalyzeInput } from './provider'
 
 const SYSTEM_PROMPT = `คุณคือโค้ชวิเคราะห์ routine ส่วนตัว วิเคราะห์ข้อมูลที่ได้รับแล้วตอบเป็นภาษาไทย
@@ -39,11 +39,32 @@ const BACKGROUND_CHAIN = [
   ...DEFAULT_CHAIN.filter(m => m !== 'gemini-3.5-flash-lite'),
 ] as const
 
-function isQuotaError(err: unknown): boolean {
+// เจอเคสจริง: 3.8-flash → 503 → 3.7-flash → 503 → 3.6-flash → สำเร็จ รวม 2.8 นาที เพราะแต่ละ attempt
+// ไม่มี timeout ของตัวเอง ปล่อยรอ Google ตอบ 503 นานแค่ไหนก็ได้ก่อนจะ fallback — ตั้ง cap ต่อโมเดลไว้
+// ~12 วิ: หลวมพอสำหรับ response ปกติตอนโหลดไม่หนัก แต่สั้นพอให้ 3-5 ครั้งติดกันยังรวมกันไม่เกิน ~30-45 วิ
+// (ไม่ใช่หลักนาทีเหมือนที่เจอจริง)
+const ATTEMPT_TIMEOUT_MS = 12000
+
+// error ที่ "ลองโมเดลถัดไปแล้วน่าจะรอด" — โควตา/rate-limit (429) หรือโมเดลนั้นล่ม/overload ชั่วคราว (503)
+// ของเดิม (429) ไม่แตะ logic เลย ยังเช็ค err.message ประกอบด้วยเหมือนเดิม (Google เคยใส่คำว่า
+// RESOURCE_EXHAUSTED ปนมาใน message ของ 429 บางเคส)
+//
+// ส่วน 503 ที่เพิ่มใหม่ — เช็คจาก @google/generative-ai's handleResponseNotOk (dist/index.js) แล้ว:
+// SDK เก็บแค่ response.status (ตัวเลข HTTP จริง) กับ response.statusText (reason phrase มาตรฐานของ
+// HTTP เช่น "Service Unavailable") ไว้ใน err.status/err.statusText ตรงๆ — ไม่ได้แกะ json.error.status
+// (enum แบบ "UNAVAILABLE" ของ Google) ออกมาเป็น field แยกเลย ข้อความบรรยาย (เช่น "high demand") อยู่ใน
+// err.message ซึ่งเป็น prose เปลี่ยนได้เรื่อยๆ เลยเช็ค err.status (ตัวเลข 503) เป็นหลักเสมอสำหรับเคสนี้
+// ไม่ parse ข้อความ prose นั้น — statusText เป็น backup ได้เพราะเป็น reason phrase มาตรฐานของ HTTP
+// ไม่ใช่ prose เฉพาะของ Google ที่จะเปลี่ยนบ่อย
+function isRetryableError(err: unknown): boolean {
   if (err instanceof GoogleGenerativeAIFetchError) {
-    if (err.status === 429) return true
-    const haystack = `${err.message} ${err.statusText ?? ''}`.toUpperCase()
-    if (haystack.includes('RESOURCE_EXHAUSTED') || haystack.includes('QUOTA')) return true
+    if (err.status === 429 || err.status === 503) return true
+
+    const messageHaystack = `${err.message} ${err.statusText ?? ''}`.toUpperCase()
+    if (messageHaystack.includes('RESOURCE_EXHAUSTED') || messageHaystack.includes('QUOTA')) return true
+
+    const statusTextOnly = `${err.statusText ?? ''}`.toUpperCase()
+    if (statusTextOnly.includes('UNAVAILABLE')) return true
   }
   return false
 }
@@ -56,24 +77,47 @@ async function callGemini(
   if (!apiKey) throw new Error('ยังไม่ได้ตั้ง GEMINI_API_KEY ใน .env.local')
 
   const genAI = new GoogleGenerativeAI(apiKey)
+  const overallStart = Date.now()
+  let attempts = 0
+  let timeoutCount = 0
 
   for (const modelId of chain) {
+    attempts++
+    // AbortController ต่อ attempt — ยิง .abort() เองถ้าเกิน ATTEMPT_TIMEOUT_MS ไม่รอ Google ตอบเท่าไหร่
+    // ก็ได้แบบเดิม (SDK จับ AbortError แล้วห่อเป็น GoogleGenerativeAIAbortError ให้เองอยู่แล้ว)
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), ATTEMPT_TIMEOUT_MS)
+
     try {
       const model = genAI.getGenerativeModel({ model: modelId, systemInstruction: systemPrompt })
-      const result = await model.generateContent(parts)
-      // log ไว้ดูเองว่ารุ่นไหนรับงานจริง ไม่โชว์ผู้ใช้
-      console.log(`[gemini] served by ${modelId}`)
+      const result = await model.generateContent(parts, { signal: controller.signal })
+      console.log(`[gemini] served by ${modelId}`) // log ไว้ดูเองว่ารุ่นไหนรับงานจริง ไม่โชว์ผู้ใช้
+      console.log(`[gemini] total time: ${Date.now() - overallStart}ms across ${attempts} attempt(s)`)
       return result.response.text()
     } catch (err) {
-      if (isQuotaError(err)) {
-        console.log(`[gemini] ${modelId} โควตาเต็ม/rate-limit — ลองรุ่นถัดไป`)
+      const timedOut = err instanceof GoogleGenerativeAIAbortError
+      if (timedOut) timeoutCount++
+
+      // timeout ถือเป็น retryable เหมือน 429/503 เสมอ — ไม่ใช่ bug จริง แค่โมเดลนั้นช้า/ล่มตอนนี้
+      if (timedOut || isRetryableError(err)) {
+        console.log(`[gemini] ${modelId} ${timedOut
+          ? `หมดเวลารอ (เกิน ${ATTEMPT_TIMEOUT_MS}ms)`
+          : 'โควตาเต็ม/rate-limit/overload ชั่วคราว'} — ลองรุ่นถัดไป`)
         continue
       }
+      console.log(`[gemini] total time: ${Date.now() - overallStart}ms across ${attempts} attempt(s) (failed)`)
       throw err
+    } finally {
+      clearTimeout(timer)
     }
   }
 
-  throw new Error(`โมเดล Gemini ทุกตัวโควตาเต็มพร้อมกัน (${chain.join(', ')}) ลองใหม่อีกครั้งภายหลัง`)
+  console.log(`[gemini] total time: ${Date.now() - overallStart}ms across ${attempts} attempt(s) (all failed)`)
+  // แยกข้อความให้รู้ว่า "หมดเวลารอ" ล้วนๆ หรือปนกับสาเหตุอื่น (โควตา/overload) — แค่เผื่อ debug ง่ายขึ้น
+  const reason = timeoutCount === chain.length
+    ? `หมดเวลารอ (เกิน ${ATTEMPT_TIMEOUT_MS}ms ต่อครั้ง)`
+    : 'โควตาเต็ม/ล่มชั่วคราว/หมดเวลารอ'
+  throw new Error(`โมเดล Gemini ทุกตัว${reason}พร้อมกัน (${chain.join(', ')}) ลองใหม่อีกครั้งภายหลัง`)
 }
 
 export const geminiProvider: AiProvider = {

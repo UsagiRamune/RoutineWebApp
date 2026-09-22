@@ -8,6 +8,7 @@ import {
 } from 'date-fns'
 import { CalendarDays, CheckSquare, Plus, X, ChevronLeft, ChevronRight, Grid3x3 } from 'lucide-react'
 import { TZ } from '@/lib/dates'
+import CalendarDayCircle from '@/components/ui/CalendarDayCircle'
 
 const WEEKDAY_LABELS = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส']
 
@@ -303,33 +304,15 @@ export default function CalendarPanel() {
                   const hasItems = ((dayItems?.events.length ?? 0) + (dayItems?.tasks.length ?? 0)) > 0
                   const today = isToday(d)
                   const selected = selectedGridDay === key
-                  // today ชนะเสมอถ้าชนกับ selected (เช่นตอนเพิ่งโหลดหน้า selectedGridDay = วันนี้พอดี)
-                  // ring ของ selected ใช้เฉพาะตอนวันที่เลือกไม่ใช่วันนี้เท่านั้น
-                  const showRing = selected && !today
                   return (
                     <button key={key} disabled={!inMonth}
                       onClick={() => setSelectedGridDay(key)}
                       className={`relative rounded-lg flex flex-col items-center justify-center
                         min-h-[60px] text-xs transition-colors
                         ${!inMonth ? 'cursor-default' : 'hover:bg-[#171412]'}`}>
-                      <span className={`relative w-7 h-7 flex items-center justify-center rounded-full font-mono
-                        ${!inMonth ? 'text-[#332D28]'
-                          : today ? 'bg-[#4FC1E0] text-[#171412] font-semibold'
-                          : showRing ? 'text-[#EDEAE0] ring-1 ring-[#4FC1E0] font-semibold'
-                          : hasItems ? 'text-[#EDEAE0]'
-                          : 'text-[#8A8178]'}`}>
-                        {d.getDate()}
-                        {/* วันนี้ + มีนัดหมาย — badge ขอบสีพื้นการ์ด (ตัดกับวงกลม accent) มุมขวาบน ซ้อนขอบวงกลม */}
-                        {hasItems && today && (
-                          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-[#201C19]"
-                            style={{ background: CATEGORY_COLOR }} />
-                        )}
-                      </span>
-                      {/* ไม่ใช่วันนี้แต่มีนัดหมาย — จุดสีหมวดหมู่มุมขวาบนของทั้งเซลล์ (ไม่ใช่ใต้เลขวันที่แบบเดิม) */}
-                      {hasItems && !today && inMonth && (
-                        <span className="absolute top-1 right-1.5 w-1.5 h-1.5 rounded-full"
-                          style={{ background: CATEGORY_COLOR }} />
-                      )}
+                      <CalendarDayCircle label={d.getDate()} today={today} selected={selected}
+                        hasEvent={hasItems} inCurrentPeriod={inMonth} accentColor={CATEGORY_COLOR}
+                        panelBg="#201C19" size={28} />
                     </button>
                   )
                 })}

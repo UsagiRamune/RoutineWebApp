@@ -25,66 +25,79 @@ interface EstimateResult {
 // ขนาดรูปสูงสุดที่รับ — กันอัปโหลดไฟล์ใหญ่เกินจำเป็นและกันโดน Gemini inline data limit
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024
 
+// log ให้รู้ step ที่ error เกิดจริง + path (text/multipart) — เดิม log แค่ `console.error('...', err)`
+// เฉยๆ ซึ่งถ้า throw เกิดนอก try/catch (เช่นตอน validate multipart ก่อนถึง Gemini call) จะหลุดไปเป็น
+// 500 เปล่าๆ ของ Next เอง ไม่มี log อะไรเลย — เลยห่อทั้งฟังก์ชันด้วย try/catch ชั้นนอกอีกชั้น กันหลุด
+// ทุกกรณี ไม่ใช่แค่รอบ Gemini call เหมือนโค้ดเดิม
+function logError(step: string, err: unknown) {
+  const e = err instanceof Error ? err : new Error(String(err))
+  console.error(`[nutrition/estimate] error at step "${step}":`, {
+    message: e.message,
+    stack: e.stack,
+  })
+}
+
 export async function POST(request: Request) {
-  const { data: { user } } = await getCachedUser()
-  if (!user) {
-    return NextResponse.json({ error: 'ยังไม่ได้เข้าสู่ระบบ' }, { status: 401 })
-  }
-
-  const contentType = request.headers.get('content-type') ?? ''
-
-  // มีรูปแนบมา — parse multipart/form-data (มี text hint ประกอบได้ แต่ไม่บังคับ)
-  if (contentType.includes('multipart/form-data')) {
-    const form = await request.formData().catch(() => null)
-    if (!form) {
-      return NextResponse.json({ error: 'อ่านฟอร์มไม่สำเร็จ' }, { status: 400 })
+  let step = 'auth'
+  try {
+    const { data: { user } } = await getCachedUser()
+    if (!user) {
+      return NextResponse.json({ error: 'ยังไม่ได้เข้าสู่ระบบ' }, { status: 401 })
     }
 
-    const image = form.get('image')
-    const description = (form.get('description') as string | null) ?? ''
-    const meal = (form.get('meal') as string | null) ?? 'ไม่ระบุ'
+    const contentType = request.headers.get('content-type') ?? ''
 
-    if (!(image instanceof File) || image.size === 0) {
-      return NextResponse.json({ error: 'ไม่พบไฟล์รูป' }, { status: 400 })
-    }
-    if (image.size > MAX_IMAGE_BYTES) {
-      return NextResponse.json({ error: 'ไฟล์รูปใหญ่เกินไป (สูงสุด 8MB)' }, { status: 400 })
-    }
-    if (!image.type.startsWith('image/')) {
-      return NextResponse.json({ error: 'ไฟล์ที่แนบไม่ใช่รูปภาพ' }, { status: 400 })
-    }
+    // มีรูปแนบมา — parse multipart/form-data (มี text hint ประกอบได้ แต่ไม่บังคับ)
+    if (contentType.includes('multipart/form-data')) {
+      step = 'multipart:parse-form'
+      const form = await request.formData().catch(() => null)
+      if (!form) {
+        return NextResponse.json({ error: 'อ่านฟอร์มไม่สำเร็จ' }, { status: 400 })
+      }
 
-    try {
+      step = 'multipart:validate-fields'
+      const image = form.get('image')
+      const description = typeof form.get('description') === 'string' ? (form.get('description') as string) : ''
+      const meal = typeof form.get('meal') === 'string' ? (form.get('meal') as string) : 'ไม่ระบุ'
+
+      if (!(image instanceof File) || image.size === 0) {
+        return NextResponse.json({ error: 'ไม่พบไฟล์รูป' }, { status: 400 })
+      }
+      if (image.size > MAX_IMAGE_BYTES) {
+        return NextResponse.json({ error: 'ไฟล์รูปใหญ่เกินไป (สูงสุด 8MB)' }, { status: 400 })
+      }
+      if (!image.type.startsWith('image/')) {
+        return NextResponse.json({ error: 'ไฟล์ที่แนบไม่ใช่รูปภาพ' }, { status: 400 })
+      }
+
+      step = 'multipart:read-image-bytes'
       const buffer = Buffer.from(await image.arrayBuffer())
       const base64 = buffer.toString('base64')
+
+      step = 'multipart:gemini-call'
       const result = await generateJsonWithImage<EstimateResult>(
         `${BASE_SYSTEM_PROMPT}\n${PHOTO_ADDENDUM}`,
         `มื้อ: ${meal}${description.trim() ? `\nข้อความเสริมจากผู้ใช้: ${description.trim()}` : ''}`,
         { mimeType: image.type, base64 }
       )
       return NextResponse.json({ result })
-    } catch (err) {
-      console.error('nutrition estimate (photo) error:', err)
-      return NextResponse.json(
-        { error: 'ประเมินจากรูปไม่สำเร็จ ลองใหม่อีกทีหรือกรอกเองแบบละเอียด' },
-        { status: 500 })
     }
-  }
 
-  // ไม่มีรูป — flow เดิมเป๊ะๆ (text description อย่างเดียว) ไม่มี regression
-  const { description, meal } = await request.json().catch(() => ({}))
-  if (!description || typeof description !== 'string' || !description.trim()) {
-    return NextResponse.json({ error: 'กรอกคำอธิบายอาหารก่อน' }, { status: 400 })
-  }
+    // ไม่มีรูป — flow เดิมเป๊ะๆ (text description อย่างเดียว) ไม่มี regression
+    step = 'text:parse-json'
+    const { description, meal } = await request.json().catch(() => ({}))
+    if (!description || typeof description !== 'string' || !description.trim()) {
+      return NextResponse.json({ error: 'กรอกคำอธิบายอาหารก่อน' }, { status: 400 })
+    }
 
-  try {
+    step = 'text:gemini-call'
     const result = await generateJson<EstimateResult>(
       BASE_SYSTEM_PROMPT,
       `มื้อ: ${meal ?? 'ไม่ระบุ'}\nคำอธิบาย: ${description.trim()}`
     )
     return NextResponse.json({ result })
   } catch (err) {
-    console.error('nutrition estimate error:', err)
+    logError(step, err)
     return NextResponse.json(
       { error: 'ประเมินไม่สำเร็จ ลองใหม่อีกทีหรือกรอกเองแบบละเอียด' },
       { status: 500 })

@@ -4,7 +4,7 @@ import { getRolloverHour, todayKey } from '@/lib/dates'
 import { MorningWalkCheck, MorningWalkExercise, StravaConnection } from '@/lib/supabase/types'
 import AppNav from '@/components/AppNav'
 import RealtimeRefresher from '@/components/RealtimeRefresher'
-import MorningWalkView from '@/components/morningwalk/MorningWalkView'
+import MorningWalkSection from '@/components/morningwalk/MorningWalkSection'
 
 // searchParams ใน Next.js 15+ เป็น Promise ต้อง await
 interface Props {
@@ -33,14 +33,21 @@ export default async function MorningWalkPage({ searchParams }: Props) {
     <>
       <AppNav />
       <RealtimeRefresher />
-      <MorningWalkView
-        today={today}
-        connected={!!conn?.access_token}
-        check={checkRes.data as MorningWalkCheck | null}
-        warmupExercises={allExercises.filter(e => e.block === 'warmup')}
-        cooldownExercises={allExercises.filter(e => e.block === 'cooldown')}
-        oauthError={error ?? null}
-      />
+      {/* MorningWalkSection ห่อกรอบการ์ดของตัวเองไว้แล้ว (ใช้ร่วมกับที่ฝังใน WorkoutLanding.tsx) —
+          หน้านี้แค่ให้ page shell + จำกัดความกว้างอ่านสบายตอนมาเป็นการ์ดเดี่ยวเต็มหน้า */}
+      <main className="min-h-screen bg-[#171412] text-[#EDEAE0] pb-16">
+        <div className="max-w-2xl mx-auto px-4 pt-8">
+          <h1 className="text-xl font-semibold mb-4">🚶 เดินเช้า</h1>
+          <MorningWalkSection
+            today={today}
+            connected={!!conn?.access_token}
+            check={checkRes.data as MorningWalkCheck | null}
+            warmupExercises={allExercises.filter(e => e.block === 'warmup')}
+            cooldownExercises={allExercises.filter(e => e.block === 'cooldown')}
+            oauthError={error ?? null}
+          />
+        </div>
+      </main>
     </>
   )
 }

@@ -14,6 +14,7 @@
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { TZ } from '@/lib/dates'
+import CalendarDayCircle from '@/components/ui/CalendarDayCircle'
 
 interface Props {
   title: string
@@ -172,6 +173,11 @@ export default async function CalendarCard({ title }: Props) {
 
   let connected = false
   let allEvents: CachedEvent[] = []
+  // ทุก event ของวันนั้นๆ (ไม่กรอง "future เท่านั้น") — ใช้กับ grid hasEvent/badge โดยเฉพาะ แยกจาก
+  // allEvents ที่กรองเอาแต่ future ไว้สำหรับลิสต์ "upcoming" ด้านล่าง (เดิม bug อยู่ตรงนี้ — grid ใช้
+  // allEvents ตัวที่กรอง future แล้วมาคำนวณ hasEvent ทำให้ event ของวันนี้ที่เริ่มไปแล้วก่อนหน้านี้
+  // (เช่นประชุม 9 โมง ตอนนี้บ่ายแล้ว) หลุดจาก badge ไปเงียบๆ ทั้งที่ยังนับเป็น "มีนัดหมายวันนี้" อยู่)
+  let allEventsForGrid: CachedEvent[] = []
   let errored = false
 
   if (user) {
@@ -195,9 +201,11 @@ export default async function CalendarCard({ title }: Props) {
         errored = true
       } else {
         const now = Date.now()
-        allEvents = (data ?? [])
-          .filter(e => e.all_day || (e.start_at != null && new Date(e.start_at).getTime() >= now))
+        allEventsForGrid = (data ?? [])
           .map(e => ({ id: e.google_event_id, title: e.title ?? '(ไม่มีชื่อ)', start_at: e.start_at, all_day: e.all_day }))
+        // upcoming list เท่านั้นที่ต้องกรองเอาแต่ future — grid ใช้ allEventsForGrid ที่ไม่กรองด้านบน
+        allEvents = allEventsForGrid
+          .filter(e => e.all_day || (e.start_at != null && new Date(e.start_at).getTime() >= now))
       }
     }
   }
@@ -208,7 +216,7 @@ export default async function CalendarCard({ title }: Props) {
   const todayStr = ds(year, month, todayDay)
 
   const eventDates = new Set(
-    allEvents
+    allEventsForGrid
       .filter(e => e.start_at != null)
       .map(e => new Date(e.start_at!).toLocaleDateString('sv-SE', { timeZone: TZ }))
   )
@@ -228,45 +236,13 @@ export default async function CalendarCard({ title }: Props) {
   })
 
   // ---- cell renderer ----
-  // wrapper div (relative inline-flex) ทำหน้าที่เป็น positioning context ของ badge
-  // badge วางที่ -top-1 -right-1 = นอกขอบ circle เสมอ ไม่ทับตัวเลข
+  // ใช้ CalendarDayCircle ตัวเดียวกับ CalendarPanel.tsx (หน้า /calendar เต็ม) — กัน state/สี badge
+  // เพี้ยนกันแบบที่เคยเกิด (ดูคอมเมนต์ยาวในไฟล์นั้น) ไม่มี selection ในวิดเจ็ตนี้เลยส่ง selected=false เสมอ
   function CalCell({ cell, compact = false }: { cell: CalCell; compact?: boolean }) {
-    const size = compact ? 'w-7 h-7 text-xs' : 'w-8 h-8 text-[13px]'
-
-    if (cell.isToday) {
-      return (
-        // wrapper: relative บาง — ให้ badge วางข้างนอก circle ได้โดยไม่ disrupt grid
-        <div className="relative inline-flex">
-          <div className={`${size} flex items-center justify-center rounded-full
-            bg-[#4FC1E0] text-[#171412] font-semibold font-mono leading-none`}>
-            {cell.day}
-          </div>
-          {cell.hasEvent && (
-            // badge นอก cyan circle — ใช้ page-bg + cyan ring เพื่อ contrast ชัดบน cyan fill
-            <span className="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full
-              bg-[#171412] ring-1 ring-[#4FC1E0]" />
-          )}
-        </div>
-      )
-    }
-
-    // adjacent-month dates — ยัง dim ข้อความ แต่ถ้ามี event ก็แสดง badge (dimmed)
-    const textColor = !cell.isCurrentMonth ? 'text-[#4A4440]' : 'text-[#EDEAE0]'
-    // badge opacity: current-month = 0.8, adjacent = 0.35 (visible แต่ไม่แย่งซีน)
-    const badgeOpacity = cell.isCurrentMonth ? 'opacity-80' : 'opacity-35'
-
     return (
-      <div className="relative inline-flex">
-        <div className={`${size} flex items-center justify-center rounded-full
-          font-mono leading-none ${textColor}`}>
-          {cell.day}
-        </div>
-        {cell.hasEvent && (
-          // badge นอก circle — cyan accent, opacity บอก current vs adjacent month
-          <span className={`absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full
-            bg-[#4FC1E0] ${badgeOpacity}`} />
-        )}
-      </div>
+      <CalendarDayCircle label={cell.day} today={cell.isToday} selected={false}
+        hasEvent={cell.hasEvent} inCurrentPeriod={cell.isCurrentMonth}
+        panelBg="#201C19" size={compact ? 28 : 32} />
     )
   }
 

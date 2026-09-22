@@ -26,7 +26,7 @@ export default function CountdownRing({ totalSeconds, secondsLeft, size = 176, c
           style={{ transition: 'stroke-dashoffset 1s linear' }} />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className={`text-4xl font-bold tabular-nums ${urgent ? 'animate-pulse' : ''}`}
+        <span className={`text-4xl font-bold font-mono tabular-nums ${urgent ? 'animate-pulse' : ''}`}
           style={{ color: urgent ? '#F0A345' : undefined }}>
           {Math.max(0, secondsLeft)}
         </span>

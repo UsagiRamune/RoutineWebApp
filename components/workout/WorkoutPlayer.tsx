@@ -9,6 +9,9 @@ import {
   WorkoutBlock, WorkoutCategory, WorkoutDayWithExercises, WorkoutExercise, WorkoutExerciseRef,
 } from '@/lib/supabase/types'
 import CountdownRing from '@/components/workout/CountdownRing'
+import SegmentedRing from '@/components/workout/SegmentedRing'
+import ExercisePositionBar from '@/components/workout/ExercisePositionBar'
+import SegmentedBar from '@/components/ui/SegmentedBar'
 import { Play, Pause, X, SkipForward, Check } from 'lucide-react'
 
 interface Props {
@@ -296,15 +299,18 @@ export default function WorkoutPlayer({
           <h1 className="text-2xl font-semibold mb-6">{day.label}</h1>
 
           <div className="bg-[#201C19] border border-[#332D28] rounded-xl p-5 mb-4 text-center">
-            <p className="text-4xl font-bold tabular-nums text-[#4FC1E0]">{finalMinutes}</p>
+            <p className="text-4xl font-bold font-mono tabular-nums text-[#4FC1E0]">{finalMinutes}</p>
             <p className="text-xs text-[#8A8178] mt-1">นาทีที่ออกกำลังกาย</p>
           </div>
 
           <div className="bg-[#201C19] border border-[#332D28] rounded-xl p-4 mb-4">
             <p className="text-sm">
-              <span className="text-2xl font-semibold">{doneList.length}</span>
-              <span className="text-[#8A8178]">/{steps.filter(s => s.type === 'exercise').length ||
-                (day.workout_exercises.length || 0)} ท่าที่ทำ</span>
+              <span className="font-mono">
+                <span className="text-2xl font-semibold">{doneList.length}</span>
+                <span className="text-[#8A8178]">/{steps.filter(s => s.type === 'exercise').length ||
+                  (day.workout_exercises.length || 0)}</span>
+              </span>
+              <span className="text-[#8A8178]"> ท่าที่ทำ</span>
             </p>
           </div>
 
@@ -389,10 +395,13 @@ export default function WorkoutPlayer({
       <Header progress={progress} onExit={handleExitClick} />
 
       <div className="max-w-lg mx-auto w-full px-4 flex-1 flex flex-col pb-10">
-        <div className="flex items-center justify-between mt-2 mb-4">
+        <div className="flex items-center justify-between mt-2 mb-2">
           <p className="text-sm text-[#8A8178]">{phaseLabel(step, day.rounds)}</p>
-          <p className="text-xs text-[#8A8178]">ท่า {step.blockIndex + 1}/{step.blockTotal}</p>
+          <p className="text-xs text-[#8A8178] font-mono">{step.blockIndex + 1}/{step.blockTotal}</p>
         </div>
+        {/* ตำแหน่งท่าปัจจุบันในรอบ/บล็อกนี้ (ไม่ใช่ progress รวมทั้งเวิร์กเอาต์ — อันนั้นอยู่ที่ Header แล้ว) */}
+        <ExercisePositionBar total={step.blockTotal} currentIndex={step.blockIndex} color="#4FC1E0"
+          className="mb-4" />
 
         {ex.category && (
           <span className="self-start text-[10px] px-2 py-0.5 rounded-full border border-[#332D28]
@@ -401,13 +410,14 @@ export default function WorkoutPlayer({
           </span>
         )}
 
-        <h1 className="text-2xl font-semibold mb-3">{ex.name}</h1>
+        {/* hero — ชื่อท่า ไม่มีกรอบ ตัวใหญ่สุดในจอ */}
+        <h1 className="text-3xl font-semibold mb-3">{ex.name}</h1>
         <p className="text-base leading-relaxed text-[#EDEAE0]/90 mb-6">{ex.instructions}</p>
 
         <div className="flex-1 flex flex-col items-center justify-center">
           {isTimed ? (
             <>
-              <CountdownRing totalSeconds={ex.duration_seconds!} secondsLeft={secondsLeft}
+              <SegmentedRing totalSeconds={ex.duration_seconds!} secondsLeft={secondsLeft}
                 color="#4FC1E0" label={ex.per_side ? `ข้างที่ ${sideStep}` : undefined} />
               <div className="flex items-center gap-3 mt-6">
                 <button onClick={() => setPaused(p => !p)}
@@ -425,7 +435,7 @@ export default function WorkoutPlayer({
           ) : (
             <>
               {ex.reps_label && (
-                <p className="text-3xl font-bold text-[#4FC1E0] mb-8">{ex.reps_label}</p>
+                <p className="text-3xl font-bold font-mono text-[#4FC1E0] mb-8">{ex.reps_label}</p>
               )}
               <button onClick={() => completeExercise(step, 'done')}
                 className="w-full min-h-[56px] rounded-xl bg-[#4FC1E0] text-[#171412]
@@ -446,12 +456,11 @@ export default function WorkoutPlayer({
 }
 
 function Header({ progress, onExit }: { progress: number; onExit: () => void }) {
+  // progress รวมทั้งเวิร์กเอาต์ (warmup+circuit×rounds+cooldown) — segmented ตาม design.md แทนแท่งเรียบเดิม
   return (
     <div className="sticky top-0 bg-[#171412] z-10">
-      <div className="max-w-lg mx-auto w-full px-4 pt-4 pb-2 flex items-center justify-between">
-        <div className="h-1.5 flex-1 bg-[#332D28] rounded-full overflow-hidden mr-3">
-          <div className="h-full bg-[#4FC1E0] rounded-full transition-all" style={{ width: `${progress}%` }} />
-        </div>
+      <div className="max-w-lg mx-auto w-full px-4 pt-4 pb-2 flex items-center gap-3">
+        <SegmentedBar value={progress} target={100} segments={10} color="#4FC1E0" className="flex-1" />
         <button onClick={onExit} className="flex items-center gap-1 text-xs text-[#8A8178] flex-shrink-0">
           <X size={14} /> จบตอนนี้
         </button>

@@ -341,7 +341,10 @@ export default function NutritionView({
                     <label className="flex-shrink-0 w-11 h-11 rounded-lg border border-[#332D28]
                       flex items-center justify-center text-[#8A8178] cursor-pointer">
                       <Camera size={16} />
-                      <input type="file" accept="image/*" capture="environment" className="hidden"
+                      {/* ไม่ใส่ capture — ปล่อยให้เบราว์เซอร์/OS โชว์ตัวเลือกทั้ง "ถ่ายรูป" และ
+                          "เลือกจากคลังรูป" เอง (มี capture="environment" แล้วบังคับเปิดกล้องตรงๆ
+                          เลือกจากคลังไม่ได้) */}
+                      <input type="file" accept="image/*" className="hidden"
                         onChange={e => pickPhoto(e.target.files?.[0] ?? null)} />
                     </label>
                   </div>

@@ -294,11 +294,14 @@ export default async function Dashboard() {
                           <span className="text-xs text-[#8A8178]">ยังไม่ได้เล่น</span>
                         )}
                       </div>
-                      {/* เดินเช้า — ยืนยันผ่าน Strava/เองแยกจากสถานะเวิร์กเอาต์เย็นด้านบน (การ์ดทั้งใบลิงก์ไป
-                          /workout อยู่แล้ว เลยใช้แค่ข้อความบอกสถานะ ไม่ใส่ <Link> ซ้อนใน <Link> ของ ModuleCard) */}
-                      <p className={`text-xs mt-2 ${walkedToday ? 'text-[#4FC1E0]' : 'text-[#8A8178]'}`}>
+                      {/* เดินเช้า — ยืนยันผ่าน Strava/เองแยกจากสถานะเวิร์กเอาต์เย็นด้านบน ลิงก์ไป /morning-walk
+                          โดยเฉพาะ (ModuleCard เปลี่ยนมาเป็น stretched-link แล้ว ลิงก์ย่อยแบบนี้ซ้อนได้ปลอดภัย
+                          ต้องใส่ pointer-events-auto เองเพราะ wrapper ของ children ตั้ง pointer-events-none ไว้) */}
+                      <Link href="/morning-walk"
+                        className={`inline-block pointer-events-auto text-xs mt-2 underline underline-offset-2
+                          ${walkedToday ? 'text-[#4FC1E0]' : 'text-[#8A8178]'}`}>
                         {walkedToday ? '✓ เดินเช้าแล้ว' : 'ยังไม่เช็คเดินเช้า'}
-                      </p>
+                      </Link>
                     </ModuleCard>
                   )}
                 </div>
