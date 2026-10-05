@@ -61,6 +61,22 @@
 
 **Metric ที่จัดกลุ่มได้ (เช่น น้ำหนัก+ก้าว)** — ใส่ใน panel เดียวกัน มีเส้นแบ่งแนวตั้งบางๆ คั่น ไม่ใช่แยกเป็น 2 การ์ด
 
+**Gradient — ห้ามใช้ทั่วทั้งแอป ยกเว้นจุดเดียว**
+ห้ามใช้ gradient ทั่วทั้งแอป **ยกเว้น** progress arc ของ nested macro gauge ในหน้า Nutrition (จางไปเข้ม
+ตามแนวเส้น) ตามคำสั่งเจาะจงของผู้ใช้ — ทุกจุดอื่นในแอปยังใช้สีทึบล้วนเสมอ
+
+**Half-circle nested gauge (หน้า Nutrition)** — hero ของหน้าที่มี metric หลายตัวซ้อนกันเทียบเป้าพร้อมกัน
+(kcal/โปรตีน/คาร์บ/ไขมัน): ครึ่งวงกลม (flat side ลง) ซ้อนกันเป็นวง เรียงนอก→ใน ตามลำดับความสำคัญ สีตาม
+หมวดหมู่ที่มีอยู่แล้ว (ห้ามคิดสีใหม่) แต่ละวงมี track จาง (`#332D28`) เต็ม 180° + fill arc ยาว
+`min(value/goal, 1)` ของ 180° คำนวณจุดปลายอาร์คด้วย trigonometry จริง (ห้าม hardcode path string)
+round line cap, stroke ~9 ที่ viewBox กว้าง ~280 responsive สูงสุด ~320px — fill ใช้ gradient ข้อยกเว้น
+ด้านบน (35% จาง ที่ปลายซ้าย → 100% เข้ม ที่ปลาย progress จริง) ด้วย `gradientUnits="userSpaceOnUse"`
+ผูกกับจุดเริ่ม/จบอาร์คของวงนั้นเอง ไม่ใช่ bounding box ข้อความ (ตัวเลข hero + เป้า) อยู่ใต้อาร์คเสมอ นอก
+`<svg>` ไปเลย กันซ้อนกับอาร์คโดยโครงสร้าง — **เกินเป้า**: อาร์คค้างที่เต็ม 180° (ไม่ล้น) มีแค่ % ใน legend
+ที่เปลี่ยนเป็นสีแดง `#E4574A` ไม่มี overshoot treatment อื่นเลย — **เป้าเป็น null**: วาดแค่ track ไม่มี fill
+arc, legend โชว่แค่ค่าจริงอย่างเดียว ไม่มี /เป้า ไม่มี %
+ดูตัวอย่าง implementation จริงที่ `components/nutrition/MacroGauge.tsx`
+
 **ความกว้างหน้า (desktop)** — หน้า landing/list หลัก (เช่น Dashboard, Workout) ใช้ `max-w-5xl` ไม่ใช่
 `max-w-lg` แบบเดิม (เปลืองพื้นที่จอ desktop เปล่าๆ) ส่วนองค์ประกอบที่เน้นโฟกัสอ่านทีละอย่าง เช่น in-player
 ระหว่างออกกำลังกาย (WorkoutPlayer.tsx, MorningWalkPlayer.tsx) ยังใช้คอลัมน์แคบ (`max-w-lg`) ต่อไปได้ตาม
@@ -71,7 +87,13 @@
 - [x] Dashboard (`app/page.tsx`) — redesign ครบตาม design.md แล้ว
 - [x] Workout (`app/workout/page.tsx`, `/morning-walk`) — redesign ครบตาม design.md แล้ว (day-picker
   5-state, การ์ดเช้า/เย็นน้ำหนักเท่ากัน, in-player hero + segmented ring/bar, ประวัติ + ลบ)
+- [x] Nutrition (`app/nutrition/page.tsx`) — redesign ครบตาม design.md แล้ว (hero = half-circle nested
+  macro gauge, เป้าหมาย/น้ำ/IF เป็น list/segmented bar, meal log เป็น list row)
+
+หมายเหตุ: day-cell ปฏิทิน 5-state (`CalendarPanel.tsx` หน้า `/calendar` เต็ม + `CalendarCard.tsx` มินิ
+ปฏิทินบน dashboard) เป็น shared component เดียวกันแล้ว (`components/ui/CalendarDayCircle.tsx`) กัน
+badge/สีเพี้ยนกันแบบที่เคยเกิด — ไม่ใช่หน้าที่ rollout แยก แต่เป็น component กลางที่หลายหน้าใช้ร่วมกัน
 
 ## หน้าที่ยังเป็นของเดิม (card แบบเดียวกันหมดทุกบล็อก)
 
-- Routine, History, Nutrition, ร่างกาย, Calendar, Projects — รอ rollout ทีละหน้า
+- Routine, History, ร่างกาย, Calendar, Projects — รอ rollout ทีละหน้า

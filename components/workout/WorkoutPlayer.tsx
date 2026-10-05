@@ -157,10 +157,15 @@ export default function WorkoutPlayer({
   const [sideStep, setSideStep] = useState<1 | 2>(1)
   const [secondsLeft, setSecondsLeft] = useState(() => initialSecondsFor(steps[initialStepIndex]))
   const [paused, setPaused] = useState(false)
-  // prep buffer 3 วิ ก่อนท่าแรกที่โชว์ตอน mount เสมอ (ไม่ว่า rep-based หรือจับเวลา) และก่อนท่าที่ต้อง
-  // จับเวลาทุกครั้งที่ไปถึง (ดู logic เต็มใน goToStep) — กันนับถอยหลังจริงเริ่มทันทีไม่มีเวลาตั้งท่า/อ่านคำแนะนำ
+  // prep buffer 3 วิ ก่อนท่าแรกที่โชว์ตอน mount เสมอ (ไม่ว่า rep-based หรือจับเวลา) เท่านั้น — ไม่ re-trigger
+  // อีกจาก goToStep แล้ว (ท่าจับเวลาตัวถัดๆ ไปใช้ tap-to-start แทน ดู timedStarted ด้านล่าง)
+  // กันนับถอยหลังจริงของ "ท่าแรก" เริ่มทันทีไม่มีเวลาตั้งท่า/อ่านคำแนะนำ
   const [prepping, setPrepping] = useState(true)
   const [prepSecondsLeft, setPrepSecondsLeft] = useState(3)
+  // ท่าจับเวลาแต่ละครั้งต้องกดเริ่มเอง ไม่นับถอยหลังอัตโนมัติแล้ว — reset เป็น false ทุกครั้งที่ไป step ใหม่
+  // (goToStep) ไม่ว่า step นั้นจะเป็นท่าจับเวลาหรือไม่ก็ตาม (ไม่มีผลกับท่าไม่จับเวลา) ไม่ reset ตอนสลับ
+  // sideStep 1→2 ภายในท่าเดียวกัน (per_side auto-advance ยังทำงานต่อเนื่องเหมือนเดิมหลังกดเริ่มรอบแรก)
+  const [timedStarted, setTimedStarted] = useState(false)
   const [doneList, setDoneList] = useState<WorkoutExerciseRef[]>(initialDone)
   const [skippedList, setSkippedList] = useState<WorkoutExerciseRef[]>(initialSkipped)
   const [phase, setPhase] = useState<'active' | 'summary'>(steps.length === 0 ? 'summary' : 'active')
@@ -212,11 +217,10 @@ export default function WorkoutPlayer({
     setSideStep(1)
     setPaused(false)
     setSecondsLeft(initialSecondsFor(next))
-    // prep buffer เฉพาะก่อนท่าที่ต้องจับเวลา (rep-based ผู้ใช้คุมจังหวะเองผ่านปุ่มอยู่แล้ว ไม่ต้องมี buffer
-    // ตอนไปท่า rep-based ถัดไป) — ครอบทั้งเคส "จบ rest แล้วเจอท่าจับเวลา" และ "ท่าจับเวลาต่อท่าจับเวลา" ในตัว
-    const needsPrep = next.type === 'exercise' && next.exercise.duration_seconds != null
-    setPrepping(needsPrep)
-    setPrepSecondsLeft(3)
+    // ไม่มี prep buffer อัตโนมัติอีกแล้วตอนเปลี่ยน step (เฉพาะท่าแรกตอน mount เท่านั้นที่ยังมี) — ท่าจับเวลา
+    // ตัวถัดไปรอ tap-to-start ของตัวเอง (reset ไว้เผื่อ next เป็นท่าจับเวลา ไม่มีผลถ้าไม่ใช่)
+    setPrepping(false)
+    setTimedStarted(false)
   }
 
   function completeExercise(s: ExerciseStep, outcome: 'done' | 'skip') {
@@ -255,12 +259,14 @@ export default function WorkoutPlayer({
   }, [phase, prepping, prepSecondsLeft])
 
   // นาฬิกานับถอยหลังจริง — ใช้กับทั้งท่าจับเวลาและหน้าจอพัก เคลียร์/ตั้งใหม่ทุกครั้งที่ step/side/paused
-  // เปลี่ยน หยุดไว้ก่อนถ้ายังอยู่ใน prep buffer
+  // เปลี่ยน หยุดไว้ก่อนถ้ายังอยู่ใน prep buffer — ท่าจับเวลาเพิ่มเงื่อนไข timedStarted: ต้องกด
+  // "เริ่มจับเวลา" เองก่อนเสมอ ไม่นับถอยหลังอัตโนมัติแล้ว (หน้าจอพักยังนับอัตโนมัติเหมือนเดิม ไม่เกี่ยว)
   useEffect(() => {
     if (phase !== 'active' || paused || !step || prepping) return
     const isTimedExercise = step.type === 'exercise' && step.exercise.duration_seconds != null
     const isRest = step.type === 'rest'
     if (!isTimedExercise && !isRest) return
+    if (isTimedExercise && !timedStarted) return
 
     const interval = setInterval(() => {
       setSecondsLeft(prev => {
@@ -286,7 +292,7 @@ export default function WorkoutPlayer({
     }, 1000)
     return () => clearInterval(interval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, stepIndex, paused, sideStep, prepping])
+  }, [phase, stepIndex, paused, sideStep, prepping, timedStarted])
 
   // ---------- summary ----------
 
@@ -416,22 +422,39 @@ export default function WorkoutPlayer({
 
         <div className="flex-1 flex flex-col items-center justify-center">
           {isTimed ? (
-            <>
-              <SegmentedRing totalSeconds={ex.duration_seconds!} secondsLeft={secondsLeft}
-                color="#4FC1E0" label={ex.per_side ? `ข้างที่ ${sideStep}` : undefined} />
-              <div className="flex items-center gap-3 mt-6">
-                <button onClick={() => setPaused(p => !p)}
-                  className="flex items-center gap-1.5 min-h-[48px] px-4 rounded-xl
-                    border border-[#332D28] text-sm text-[#EDEAE0]">
-                  {paused ? <Play size={16} /> : <Pause size={16} />} {paused ? 'เล่นต่อ' : 'หยุดชั่วคราว'}
+            !timedStarted ? (
+              // tap-to-start — ไม่นับถอยหลังอัตโนมัติแล้ว กดเองก่อนถึงเริ่มจับเวลาจริง
+              <>
+                <p className="text-3xl font-bold font-mono text-[#4FC1E0] mb-1">
+                  ค้าง {ex.duration_seconds} วิ{ex.per_side ? '/ข้าง' : ''}
+                </p>
+                {ex.per_side && (
+                  <p className="text-sm text-[#8A8178] mb-8">ข้างที่ 1/2</p>
+                )}
+                <button onClick={() => setTimedStarted(true)}
+                  className="w-full min-h-[56px] rounded-xl bg-[#4FC1E0] text-[#171412]
+                    text-base font-semibold flex items-center justify-center gap-2">
+                  <Play size={18} /> เริ่มจับเวลา
                 </button>
-                <button onClick={() => finishTimedEarly(step)}
-                  className="flex items-center gap-1.5 min-h-[48px] px-4 rounded-xl
-                    bg-[#4FC1E0] text-[#171412] text-sm font-semibold">
-                  <Check size={16} /> เสร็จแล้ว
-                </button>
-              </div>
-            </>
+              </>
+            ) : (
+              <>
+                <SegmentedRing totalSeconds={ex.duration_seconds!} secondsLeft={secondsLeft}
+                  color="#4FC1E0" label={ex.per_side ? `ข้างที่ ${sideStep}` : undefined} />
+                <div className="flex items-center gap-3 mt-6">
+                  <button onClick={() => setPaused(p => !p)}
+                    className="flex items-center gap-1.5 min-h-[48px] px-4 rounded-xl
+                      border border-[#332D28] text-sm text-[#EDEAE0]">
+                    {paused ? <Play size={16} /> : <Pause size={16} />} {paused ? 'เล่นต่อ' : 'หยุดชั่วคราว'}
+                  </button>
+                  <button onClick={() => finishTimedEarly(step)}
+                    className="flex items-center gap-1.5 min-h-[48px] px-4 rounded-xl
+                      bg-[#4FC1E0] text-[#171412] text-sm font-semibold">
+                    <Check size={16} /> เสร็จแล้ว
+                  </button>
+                </div>
+              </>
+            )
           ) : (
             <>
               {ex.reps_label && (

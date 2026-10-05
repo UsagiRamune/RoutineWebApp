@@ -24,7 +24,7 @@ export async function buildAnalysisSummary(supabase: any, days: number, rollover
       .gte('date', fromStr),
     supabase.from('body_metrics').select('*').gte('date', fromStr).order('date'),
     supabase.from('routine_categories').select('id, name, kind'),
-    supabase.from('food_entries').select('date, calories, protein_g').gte('date', fromStr),
+    supabase.from('food_entries').select('date, calories, protein_g, carbs_g, fat_g').gte('date', fromStr),
     supabase.from('water_entries').select('date, ml').gte('date', fromStr),
     supabase.from('supplement_logs').select('date, supplement_id').gte('date', fromStr),
     supabase.from('supplements').select('id, name').eq('is_active', true),
@@ -114,11 +114,13 @@ export async function buildAnalysisSummary(supabase: any, days: number, rollover
     lines.push(...topics.slice(0, 60)) // จำกัดกัน prompt บวม
   }
 
-  const nutByDay = new Map<string, { cal: number; protein: number }>()
+  const nutByDay = new Map<string, { cal: number; protein: number; carbs: number; fat: number }>()
   for (const f of foodEntries.data ?? []) {
-    const cur = nutByDay.get(f.date) ?? { cal: 0, protein: 0 }
+    const cur = nutByDay.get(f.date) ?? { cal: 0, protein: 0, carbs: 0, fat: 0 }
     cur.cal += f.calories ?? 0
     cur.protein += f.protein_g ?? 0
+    cur.carbs += f.carbs_g ?? 0
+    cur.fat += f.fat_g ?? 0
     nutByDay.set(f.date, cur)
   }
   const calBurnedByDay = new Map<string, number | null>(
@@ -138,7 +140,12 @@ export async function buildAnalysisSummary(supabase: any, days: number, rollover
       })` : ''
       const proteinGap = profile?.daily_protein_g != null
         ? ` (เป้า ${profile.daily_protein_g} ก.)` : ''
-      let line = `${d}: ${Math.round(v.cal)} kcal${calGap}, โปรตีน ${v.protein.toFixed(0)} ก.${proteinGap}`
+      const carbsGap = profile?.daily_carbs_g != null
+        ? ` (เป้า ${profile.daily_carbs_g} ก.)` : ''
+      const fatGap = profile?.daily_fat_g != null
+        ? ` (เป้า ${profile.daily_fat_g} ก.)` : ''
+      let line = `${d}: ${Math.round(v.cal)} kcal${calGap}, โปรตีน ${v.protein.toFixed(0)} ก.${proteinGap}, ` +
+        `คาร์บ ${v.carbs.toFixed(0)} ก.${carbsGap}, ไขมัน ${v.fat.toFixed(0)} ก.${fatGap}`
       if (profile?.bmr_kcal != null) {
         const burned = calBurnedByDay.get(d)
         const tdee = profile.bmr_kcal + (burned ?? 0)

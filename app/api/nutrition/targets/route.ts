@@ -54,13 +54,24 @@ export async function POST(request: Request) {
     // น้ำ: 35 ml/kg ปัดขึ้นเป็นหลักร้อยที่ใกล้ที่สุด — สูตรตายตัว ไม่ต้องพึ่ง AI เดา
     const dailyWaterMl = Math.ceil((metric.weight_kg * 35) / 100) * 100
 
+    const dailyCalories = Math.round(result.daily_calories)
+    const dailyProteinG = Math.round(result.daily_protein_g)
+
+    // ไขมัน/คาร์บ คิดเป็นสูตรตายตัวในโค้ด ไม่ผ่าน LLM เลย — ไขมัน 25% ของแคล, คาร์บเอาที่เหลือ
+    // (sanity check: แคล 2200 โปรตีน 180 ต้องได้ไขมัน 61 คาร์บ 233 พอดี)
+    const dailyFatG = Math.round((0.25 * dailyCalories) / 9)
+    const dailyCarbsG = Math.max(0, Math.round((dailyCalories - dailyProteinG * 4 - dailyFatG * 9) / 4))
+    const macroSplitLine = `ไขมัน ${dailyFatG} ก. (25% ของแคล) คาร์บ ${dailyCarbsG} ก. (ส่วนที่เหลือ) — คำนวณตรงจากแคล/โปรตีน ไม่ผ่าน AI`
+
     const { data: profile, error } = await supabase.from('nutrition_profile').upsert({
       id: 1,
       plan,
-      daily_calories: Math.round(result.daily_calories),
-      daily_protein_g: Math.round(result.daily_protein_g),
+      daily_calories: dailyCalories,
+      daily_protein_g: dailyProteinG,
+      daily_carbs_g: dailyCarbsG,
+      daily_fat_g: dailyFatG,
       daily_water_ml: dailyWaterMl,
-      ai_rationale: result.rationale,
+      ai_rationale: `${result.rationale}\n${macroSplitLine}`,
       updated_at: new Date().toISOString(),
     }).select().single()
 

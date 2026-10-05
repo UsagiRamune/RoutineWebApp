@@ -18,14 +18,9 @@ import {
   ResponsiveContainer, CartesianGrid,
 } from 'recharts'
 import ReactMarkdown from 'react-markdown'
+import { DELETE_HOVER_REVEAL } from '@/lib/uiClasses'
 
 type ViewMode = 'week' | 'month' | 'year'
-
-// ปุ่มลบ: จอสัมผัสไม่มี hover state เลยต้องโชว์ตลอด ส่วนจอ desktop (มี mouse จริง) ค่อยซ่อนแล้วโชว์ตอน
-// hover/focus แถว — เช็คด้วย media feature (hover: hover) ตรงๆ ไม่ใช้ Tailwind hover: เฉยๆ เพราะอันนั้น
-// เป็น :hover ธรรมดา ทำงานทั้งจอสัมผัสด้วย (กดค้างแล้วปุ่มเด้งโผล่ผิดจังหวะ)
-const DELETE_HOVER_REVEAL = 'transition-opacity opacity-100 [@media(hover:hover)]:opacity-0 ' +
-  '[@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus-visible:opacity-100'
 
 interface Props {
   view: ViewMode

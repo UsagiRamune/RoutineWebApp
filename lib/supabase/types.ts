@@ -181,6 +181,8 @@ export interface NutritionProfile {
   plan: NutritionPlan
   daily_calories: number | null
   daily_protein_g: number | null
+  daily_carbs_g: number | null
+  daily_fat_g: number | null
   daily_water_ml: number
   ml_per_sip: number
   ai_rationale: string | null

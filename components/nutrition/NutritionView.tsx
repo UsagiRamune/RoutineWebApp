@@ -14,7 +14,9 @@ import { remainingInContainer } from '@/lib/water'
 import { TZ } from '@/lib/dates'
 import { GlassWater, Plus, X, Trash2, Sparkles, Camera } from 'lucide-react'
 import Toggle from '@/components/ui/Toggle'
-import ProgressBar from '@/components/ui/ProgressBar'
+import SegmentedBar from '@/components/ui/SegmentedBar'
+import MacroGauge from '@/components/nutrition/MacroGauge'
+import { DELETE_HOVER_REVEAL } from '@/lib/uiClasses'
 
 interface Props {
   today: string
@@ -294,28 +296,11 @@ export default function NutritionView({
         <h1 className="text-xl font-semibold mb-6">โภชนาการ</h1>
 
         <div className="lg:grid lg:grid-cols-[2fr_1fr] lg:gap-6 lg:items-start">
-          {/* ---------- คอลัมน์ซ้าย: เพิ่มอาหาร + meal log ---------- */}
+          {/* ---------- คอลัมน์ซ้าย: hero gauge + เพิ่มอาหาร + meal log ---------- */}
           <div>
-            {/* สรุปแมโคร */}
-            <div className="bg-[#201C19] border border-[#332D28] rounded-xl p-4 mb-4">
-              <p className="text-3xl font-semibold tabular-nums">
-                {Math.round(totals.calories)} <span className="text-sm font-normal text-[#8A8178]">kcal</span>
-              </p>
-              <div className="flex gap-2 mt-2">
-                <span className="text-xs px-2 py-1 rounded-md bg-[#171412] border border-[#332D28]">
-                  โปรตีน {totals.protein.toFixed(0)}
-                  {profile?.daily_protein_g != null && `/${profile.daily_protein_g}`} ก.
-                </span>
-                <span className="text-xs px-2 py-1 rounded-md bg-[#171412] border border-[#332D28]">
-                  คาร์บ {totals.carbs.toFixed(0)} ก.
-                </span>
-                <span className="text-xs px-2 py-1 rounded-md bg-[#171412] border border-[#332D28]">
-                  ไขมัน {totals.fat.toFixed(0)} ก.
-                </span>
-              </div>
-              {profile?.daily_protein_g != null && (
-                <ProgressBar value={totals.protein} target={profile.daily_protein_g} className="mt-2" />
-              )}
+            {/* hero — ครึ่งวงกลมซ้อน 4 ชั้น ไม่มีกรอบ (hero ตาม design.md) */}
+            <div className="mb-6">
+              <MacroGauge totals={totals} profile={profile} />
             </div>
 
             {/* เพิ่มอาหาร */}
@@ -445,30 +430,36 @@ export default function NutritionView({
               </button>
             </div>
 
-            {/* meal log */}
+            {/* meal log — list row ตาม design.md (เส้นสีซ้าย ไม่ใช่กรอบแยกทีละรายการ) */}
             {MEALS.map(meal => {
               const mealEntries = entries.filter(e => e.meal === meal)
               if (mealEntries.length === 0) return null
               return (
                 <section key={meal} className="mb-6">
-                  <h2 className="text-sm font-semibold mb-2">{MEAL_LABELS[meal]}</h2>
-                  {mealEntries.map(e => (
-                    <div key={e.id}
-                      className="bg-[#201C19] border border-[#332D28] rounded-xl p-3 mb-2
-                        flex items-center gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm truncate">{e.name}</p>
-                        <p className="text-xs text-[#8A8178] tabular-nums">
-                          {e.calories ?? 0} kcal
-                          {(e.protein_g || e.carbs_g || e.fat_g) &&
-                            ` · P${e.protein_g ?? 0} C${e.carbs_g ?? 0} F${e.fat_g ?? 0}`}
-                          {e.note && ` · ${e.note}`}
-                        </p>
+                  <h2 className="text-sm font-semibold mb-1">{MEAL_LABELS[meal]}</h2>
+                  <div className="divide-y divide-[#332D28]">
+                    {mealEntries.map(e => (
+                      <div key={e.id} className="group flex items-center gap-2 py-2 pl-3 border-l-2"
+                        style={{ borderColor: '#F0A345' }}>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm truncate">{e.name}</p>
+                          <p className="text-xs text-[#8A8178]">
+                            <span className="font-mono">{e.calories ?? 0}</span> kcal
+                            {(e.protein_g || e.carbs_g || e.fat_g) && (
+                              <span className="font-mono">
+                                {' '}· P{e.protein_g ?? 0} C{e.carbs_g ?? 0} F{e.fat_g ?? 0}
+                              </span>
+                            )}
+                            {e.note && ` · ${e.note}`}
+                          </p>
+                        </div>
+                        <button onClick={() => deleteFood(e.id)}
+                          className={`text-[#E4574A] p-2 flex-shrink-0 ${DELETE_HOVER_REVEAL}`}>
+                          <Trash2 size={13} />
+                        </button>
                       </div>
-                      <button onClick={() => deleteFood(e.id)}
-                        className="text-[#8A8178] p-2 flex-shrink-0"><Trash2 size={13} /></button>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </section>
               )
             })}
@@ -492,11 +483,27 @@ export default function NutritionView({
                 ))}
               </div>
               {profile ? (
-                <div className="text-xs text-[#8A8178] space-y-0.5 mb-3">
-                  <p>แคลอรี่: {profile.daily_calories ?? '—'} kcal</p>
-                  <p>โปรตีน: {profile.daily_protein_g ?? '—'} ก.</p>
-                  <p>น้ำ: {(profile.daily_water_ml / 1000).toFixed(1)} ล./วัน</p>
-                  {profile.ai_rationale && <p className="mt-1.5 italic">{profile.ai_rationale}</p>}
+                <div className="space-y-1.5 mb-3">
+                  {([
+                    ['แคลอรี่', profile.daily_calories, 'kcal'],
+                    ['โปรตีน', profile.daily_protein_g, 'ก.'],
+                    ['คาร์บ', profile.daily_carbs_g, 'ก.'],
+                    ['ไขมัน', profile.daily_fat_g, 'ก.'],
+                    ['น้ำ', Math.round(profile.daily_water_ml / 100) / 10, 'ล./วัน'],
+                  ] as const).map(([label, value, unit]) => (
+                    <div key={label} className="flex items-center justify-between text-sm">
+                      <span className="text-[#8A8178]">{label}</span>
+                      <span>
+                        <span className="font-mono">{value ?? '—'}</span>{' '}
+                        <span className="text-xs text-[#8A8178]">{unit}</span>
+                      </span>
+                    </div>
+                  ))}
+                  {/* ai_rationale ต่อท้ายด้วยบรรทัดสูตรไขมัน/คาร์บจาก /api/nutrition/targets เสมอ
+                      (คนละบรรทัด) — whitespace-pre-line ให้ \n ขึ้นบรรทัดใหม่จริง ไม่ต้องแยก <p> เอง */}
+                  {profile.ai_rationale && (
+                    <p className="text-[11px] text-[#8A8178] whitespace-pre-line pt-1">{profile.ai_rationale}</p>
+                  )}
                 </div>
               ) : (
                 <p className="text-xs text-[#8A8178] mb-3">ยังไม่ตั้งเป้า</p>
@@ -515,24 +522,27 @@ export default function NutritionView({
                 <p className="text-xs text-[#8A8178] flex items-center gap-1.5">
                   <GlassWater size={13} /> น้ำดื่ม
                 </p>
-                <span className="text-xs tabular-nums text-[#8A8178]">
-                  {(currentMl / 1000).toFixed(2)}/{(targetMl / 1000).toFixed(2)} ล.
+                <span className="text-xs text-[#8A8178]">
+                  <span className="font-mono">{(currentMl / 1000).toFixed(2)}/{(targetMl / 1000).toFixed(2)}</span> ล.
                   {overMl > 0 && (
-                    <span className="text-[#4FC1E0] ml-1.5">เกินเป้า +{(overMl / 1000).toFixed(1)} ล.</span>
+                    <span className="text-[#4FC1E0] ml-1.5">
+                      เกินเป้า +<span className="font-mono">{(overMl / 1000).toFixed(1)}</span> ล.
+                    </span>
                   )}
                 </span>
               </div>
-              <ProgressBar value={currentMl} target={targetMl} className="mb-2" />
+              <SegmentedBar value={currentMl} target={targetMl} color="#4FC1E0" className="mb-2" />
               {remainingHint && (
                 <p className="text-[10px] text-[#8A8178] mb-2">{remainingHint}</p>
               )}
 
+              {/* chip แบบ outline (ไม่ทึบพื้น) ตาม design.md */}
               <div className="flex flex-wrap gap-2 mb-2">
                 {containers.map(c => (
                   <button key={c.id} onClick={() => addWater(c.ml, c.name)}
-                    className="px-3 py-2 rounded-lg bg-[#171412] border border-[#332D28]
+                    className="px-3 py-2 rounded-lg border border-[#332D28]
                       text-xs font-semibold min-h-[40px]">
-                    {c.name} +{c.ml}
+                    {c.name} +<span className="font-mono">{c.ml}</span>
                   </button>
                 ))}
               </div>
@@ -559,8 +569,9 @@ export default function NutritionView({
                 <div className="mt-2 space-y-0.5">
                   {allWaterEntries.map(e => (
                     <div key={e.id} className="flex items-center justify-between text-xs text-[#8A8178]">
-                      <span className="tabular-nums">
-                        {fmtHHMM(e.created_at)} · {e.ml} ml{e.container ? ` (${e.container})` : ''}
+                      <span>
+                        <span className="font-mono">{fmtHHMM(e.created_at)} · {e.ml}</span> ml
+                        {e.container ? ` (${e.container})` : ''}
                       </span>
                       {!e.id.startsWith('temp-') && (
                         <button onClick={() => removeWater(e.id)} className="p-1.5">
@@ -622,9 +633,9 @@ export default function NutritionView({
 
                 {ifSettings.enabled && status && (
                   <p className="text-sm font-medium mb-3">
-                    {status.eating
-                      ? `อยู่ในช่วงกิน เหลือ ${fmtRemaining(status.remainingSec)}`
-                      : `กำลัง fast เหลือ ${fmtRemaining(status.remainingSec)} ถึงจะกินได้`}
+                    {status.eating ? 'อยู่ในช่วงกิน เหลือ ' : 'กำลัง fast เหลือ '}
+                    <span className="font-mono">{fmtRemaining(status.remainingSec)}</span>
+                    {!status.eating && ' ถึงจะกินได้'}
                   </p>
                 )}
 

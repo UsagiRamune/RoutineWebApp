@@ -172,12 +172,11 @@ export default async function CalendarCard({ title }: Props) {
   const { data: { user } } = await getCachedUser()
 
   let connected = false
+  // ทุก event ตั้งแต่เที่ยงคืนวันนี้เป็นต้นไป (query ด้านล่าง gte ที่ dayStart อยู่แล้ว) — ใช้ทั้งกับ
+  // grid hasEvent/badge และลิสต์ "upcoming" ตัวเดียวกันเลย ไม่ต้องกรอง "start_at >= now" ซ้ำอีกชั้น
+  // (เคยกรองไว้ก่อนหน้านี้ ทำให้ event ของวันนี้ที่เริ่มไปแล้ว เช่นประชุม 9 โมง ตอนนี้บ่ายแล้ว หลุดทั้ง
+  // จาก badge ของ grid และจากลิสต์ upcoming — ลิสต์เด้งไปโชว์ event ของวันพรุ่งนี้เลยทั้งที่วันนี้ก็มี)
   let allEvents: CachedEvent[] = []
-  // ทุก event ของวันนั้นๆ (ไม่กรอง "future เท่านั้น") — ใช้กับ grid hasEvent/badge โดยเฉพาะ แยกจาก
-  // allEvents ที่กรองเอาแต่ future ไว้สำหรับลิสต์ "upcoming" ด้านล่าง (เดิม bug อยู่ตรงนี้ — grid ใช้
-  // allEvents ตัวที่กรอง future แล้วมาคำนวณ hasEvent ทำให้ event ของวันนี้ที่เริ่มไปแล้วก่อนหน้านี้
-  // (เช่นประชุม 9 โมง ตอนนี้บ่ายแล้ว) หลุดจาก badge ไปเงียบๆ ทั้งที่ยังนับเป็น "มีนัดหมายวันนี้" อยู่)
-  let allEventsForGrid: CachedEvent[] = []
   let errored = false
 
   if (user) {
@@ -200,12 +199,8 @@ export default async function CalendarCard({ title }: Props) {
       if (error) {
         errored = true
       } else {
-        const now = Date.now()
-        allEventsForGrid = (data ?? [])
+        allEvents = (data ?? [])
           .map(e => ({ id: e.google_event_id, title: e.title ?? '(ไม่มีชื่อ)', start_at: e.start_at, all_day: e.all_day }))
-        // upcoming list เท่านั้นที่ต้องกรองเอาแต่ future — grid ใช้ allEventsForGrid ที่ไม่กรองด้านบน
-        allEvents = allEventsForGrid
-          .filter(e => e.all_day || (e.start_at != null && new Date(e.start_at).getTime() >= now))
       }
     }
   }
@@ -216,7 +211,7 @@ export default async function CalendarCard({ title }: Props) {
   const todayStr = ds(year, month, todayDay)
 
   const eventDates = new Set(
-    allEventsForGrid
+    allEvents
       .filter(e => e.start_at != null)
       .map(e => new Date(e.start_at!).toLocaleDateString('sv-SE', { timeZone: TZ }))
   )
