@@ -51,6 +51,16 @@ export function rolloverBoundaryIso(dateKey: string, rolloverHour: number = DEFA
   return new Date(`${dateKey}T${String(rolloverHour).padStart(2, '0')}:00:00+07:00`).toISOString()
 }
 
+// บวกวันแบบปฏิทินล้วนๆ บน YYYY-MM-DD string — ใช้ Date.UTC แค่เป็นเครื่องคิดเลขปฏิทิน (จัดการ
+// ข้ามเดือน/ข้ามปีให้ถูกต้องเอง) ไม่ได้แปลงโซนเวลาอะไรเลย ไม่เกี่ยวกับ TZ ของแอป — ใช้ตอนต้องการ "วันถัดไป"
+// ของ date string ล้วนๆ (เช่น Google Calendar all-day event ที่ end.date ต้อง exclusive เสมอ:
+// event 1 วันต้อง end = start+1 ไม่ใช่ end = start ซึ่งจะกลายเป็น event ความยาว 0)
+export function nextCalendarDateString(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const next = new Date(Date.UTC(y, m - 1, d + 1))
+  return `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, '0')}-${String(next.getUTCDate()).padStart(2, '0')}`
+}
+
 // hour/minute/weekday ปัจจุบันตาม Asia/Bangkok wall clock — ใช้ในโค้ดฝั่ง server (cron) ที่รันบน UTC
 // weekday: 0=อาทิตย์ (ตรงกับ convention ของ routines.remind_days ในแอปนี้)
 export function bangkokNow(d: Date = new Date()): { hour: number; minute: number; weekday: number; dateKey: string } {

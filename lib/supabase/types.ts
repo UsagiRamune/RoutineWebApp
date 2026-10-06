@@ -216,6 +216,7 @@ export interface AppSettings {
   assumed_sleep_hours: number
   notify_email: string | null
   quiet_hours_enabled: boolean
+  ai_last_probe_at: string | null
 }
 
 // ---------- notifications ----------
@@ -367,6 +368,8 @@ export interface CalendarEventCache {
   description: string | null
 }
 
+export type WebhookResult = 'ok' | 'rejected_token' | 'rejected_channel' | 'error'
+
 export interface GoogleCalendarChannel {
   id: string
   calendar_id: string
@@ -374,6 +377,47 @@ export interface GoogleCalendarChannel {
   resource_id: string
   expiration: string
   created_at: string
+  address: string | null
+  last_webhook_at: string | null
+  last_webhook_state: string | null
+  last_webhook_result: WebhookResult | null
+  last_webhook_error: string | null
+}
+
+export type CalendarSyncSource = 'cron' | 'webhook' | 'mutation' | 'manual'
+
+export interface CalendarSyncDeletedItem {
+  google_event_id: string
+  title: string
+  start_at: string | null
+}
+
+export interface CalendarSyncLog {
+  id: string
+  at: string
+  source: CalendarSyncSource
+  window_from: string | null
+  window_to: string | null
+  fetched_events: number
+  fetched_tasks: number
+  upserted: number
+  deleted: number
+  deleted_items: CalendarSyncDeletedItem[]
+  error: string | null
+}
+
+// ---------- AI model health memory (lib/ai/gemini.ts) ----------
+
+export type AiErrorKind = 'quota' | 'rate_limit' | 'overload' | 'timeout'
+
+export interface AiModelStatus {
+  model: string
+  unavailable_until: string | null
+  last_error_kind: AiErrorKind | null
+  last_error_at: string | null
+  last_ok_at: string | null
+  consecutive_failures: number
+  updated_at: string
 }
 
 // ---------- workout player ----------

@@ -6,6 +6,7 @@ import { weightAsOf } from '@/lib/nutrition'
 import { moduleLabel } from '@/lib/moduleLabels'
 import AppNav from '@/components/AppNav'
 import RealtimeRefresher from '@/components/RealtimeRefresher'
+import AiWarmProbe from '@/components/AiWarmProbe'
 import ModuleCard from '@/components/dashboard/ModuleCard'
 import BentoCalendarCard from '@/components/dashboard/BentoCalendarCard'
 import BentoProjectsCard from '@/components/dashboard/BentoProjectsCard'
@@ -123,6 +124,7 @@ export default async function Dashboard() {
     <>
       <AppNav />
       <RealtimeRefresher />
+      <AiWarmProbe />
       <main className="min-h-screen bg-[#171412] text-[#EDEAE0] pb-16">
         <Hero
           today={today}

@@ -12,10 +12,16 @@ export type RegisterChannelResult =
 export async function registerPrimaryCalendarChannel(
   supabase: any, origin: string, refreshToken: string
 ): Promise<RegisterChannelResult> {
+  // address ต้องมาจาก origin โปรดักชันตายตัว (SITE_URL) เสมอ ไม่ใช่ origin ของ request ที่เผลอมา
+  // trigger การ register/renew ครั้งนี้ (เช่น cron ไปยิง URL แปลกๆ หรือมีคนเปิดผ่าน preview deployment) —
+  // ไม่งั้น Google จะยิง webhook มาที่โดเมนผิดแล้วเราไม่รู้ตัวเลย ตก back ไปใช้ origin ของ request เฉพาะ
+  // ตอน dev (ไม่ได้ตั้ง SITE_URL ไว้) เท่านั้น
+  const webhookOrigin = process.env.SITE_URL || origin
+
   // Google บังคับ webhook address ต้องเป็น HTTPS public URL จริง — localhost/http ใช้ไม่ได้แน่นอน
   // (จะได้ error จาก Google ตรงๆ) ข้ามเงียบๆ ตอน dev แทนที่จะพังทุกครั้งที่รันโลคัล
-  if (!origin.startsWith('https://')) {
-    console.warn('[calendar-channel] ข้าม register: origin ไม่ใช่ https (dev/local) —', origin)
+  if (!webhookOrigin.startsWith('https://')) {
+    console.warn('[calendar-channel] ข้าม register: webhookOrigin ไม่ใช่ https (dev/local) —', webhookOrigin)
     return { ok: false, reason: 'non-https origin (dev/local)' }
   }
   const token = process.env.GOOGLE_CALENDAR_WEBHOOK_TOKEN
@@ -40,6 +46,7 @@ export async function registerPrimaryCalendarChannel(
   // ขอ ~7 วัน — Google อาจให้สั้นกว่านี้ (คุมสูงสุดฝั่ง Google เอง ไม่ได้ผูกกับสิ่งที่เราขอเสมอไป)
   // ต้องอ่านค่า expiration จริงจาก response กลับมาเก็บ ห้ามสมมติว่าได้ตามที่ขอ
   const requestedExpirationMs = Date.now() + 7 * 24 * 3600 * 1000
+  const address = `${webhookOrigin}/api/calendar/webhook`
 
   try {
     const res = await cal.events.watch({
@@ -47,7 +54,7 @@ export async function registerPrimaryCalendarChannel(
       requestBody: {
         id: channelId,
         type: 'web_hook',
-        address: `${origin}/api/calendar/webhook`,
+        address,
         token,
         expiration: String(requestedExpirationMs),
       },
@@ -58,14 +65,16 @@ export async function registerPrimaryCalendarChannel(
 
     const actualExpirationMs = res.data.expiration ? Number(res.data.expiration) : requestedExpirationMs
     console.log('[calendar-channel] registered — requested expiration ms:', requestedExpirationMs,
-      'actual (from Google response):', res.data.expiration ?? '(ไม่ส่งมา ใช้ค่าที่ขอแทน)')
+      'actual (from Google response):', res.data.expiration ?? '(ไม่ส่งมา ใช้ค่าที่ขอแทน)', '— address:', address)
 
     const expirationIso = new Date(actualExpirationMs).toISOString()
+    // เก็บ address จริงที่ลงทะเบียนไว้ด้วย (เดิมไม่เก็บเลย) — ไว้เทียบตอน debug webhook ไม่เข้า
     const { error } = await supabase.from('google_calendar_channels').upsert({
       calendar_id: 'primary',
       channel_id: res.data.id ?? channelId,
       resource_id: resourceId,
       expiration: expirationIso,
+      address,
     }, { onConflict: 'calendar_id' })
     if (error) return { ok: false, reason: `db upsert error: ${error.message}` }
 

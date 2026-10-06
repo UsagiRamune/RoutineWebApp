@@ -3,6 +3,7 @@
 // เรียกจาก context ที่มี user session อยู่แล้วเท่านั้น (route handler ที่ auth ผ่าน cookie) เพราะต้องอ่าน
 // google_connections ซึ่ง RLS ผูกกับ auth.uid() — ไม่ใช้กับ cron (ไม่มี session)
 import { calendarFor } from '@/lib/google/calendar'
+import { nextCalendarDateString } from '@/lib/dates'
 
 export type DeadlineKind = 'project' | 'field' | 'task'
 
@@ -45,10 +46,12 @@ export async function syncDeadlineEvent(
       }
     }
   } else {
+    // all-day ของ Google end.date เป็น exclusive เสมอ — event 1 วันต้อง end = start+1 ไม่ใช่ end = start
+    // (ซึ่งกลายเป็น event ความยาว 0 แล้วหลุดจาก events.list ตอน full sync รอบถัดไป)
     const requestBody = {
       summary: `📌 ${input.title}`,
       start: { date: input.due_date },
-      end: { date: input.due_date },
+      end: { date: nextCalendarDateString(input.due_date) },
     }
     try {
       if (input.existingEventId) {

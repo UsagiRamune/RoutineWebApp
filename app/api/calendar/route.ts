@@ -3,6 +3,7 @@ import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { calendarFor, tasksFor } from '@/lib/google/calendar'
 import { syncCalendarToCache } from '@/lib/google/calendar-sync'
 import { CalendarEventCache } from '@/lib/supabase/types'
+import { nextCalendarDateString } from '@/lib/dates'
 import { NextResponse, type NextRequest } from 'next/server'
 
 async function getConnection() {
@@ -70,7 +71,7 @@ export async function GET(request: NextRequest) {
     // ไปยิง Google Calendar/Tasks API สดทุกครั้ง — นี่คือผู้ต้องสงสัยอันดับ 1 ของความช้า ***
     console.warn('[calendar][GET] *** BOOTSTRAP SYNC TRIGGERED — calling live Google APIs from this GET request ***')
     const tBootstrap = Date.now()
-    const result = await syncCalendarToCache(supabase, origin, conn.refreshToken!)
+    const result = await syncCalendarToCache(supabase, origin, conn.refreshToken!, 'manual')
     console.warn(`[calendar][GET] bootstrap syncCalendarToCache(): ${Date.now() - tBootstrap}ms`, result)
     if (!('ok' in result) || !result.ok) {
       console.error('calendar bootstrap sync error:', 'error' in result ? result.error : result)
@@ -154,7 +155,7 @@ export async function POST(request: NextRequest) {
         due: new Date(`${date}T00:00:00`).toISOString(),
       },
     })
-    await syncCalendarToCache(supabase, origin, conn.refreshToken!)
+    await syncCalendarToCache(supabase, origin, conn.refreshToken!, 'mutation')
     return NextResponse.json({ ok: true })
   }
 
@@ -172,8 +173,10 @@ export async function POST(request: NextRequest) {
     : {
         summary: title,
         description: description || undefined,
+        // all-day ของ Google end.date เป็น exclusive เสมอ — event 1 วันต้อง end = start+1 ไม่ใช่
+        // end = start (ซึ่งกลายเป็น event ความยาว 0 แล้วหลุดจาก events.list ตอน full sync รอบถัดไป)
         start: { date },
-        end: { date },
+        end: { date: nextCalendarDateString(date) },
       }
 
   if (repeat && repeat !== 'none') {
@@ -188,7 +191,7 @@ export async function POST(request: NextRequest) {
   }
 
   await cal.events.insert({ calendarId, requestBody: event })
-  await syncCalendarToCache(supabase, origin, conn.refreshToken!)
+  await syncCalendarToCache(supabase, origin, conn.refreshToken!, 'mutation')
   return NextResponse.json({ ok: true })
 }
 
@@ -208,7 +211,7 @@ export async function PATCH(request: NextRequest) {
   })
 
   const supabase = await createClient()
-  await syncCalendarToCache(supabase, origin, conn.refreshToken!)
+  await syncCalendarToCache(supabase, origin, conn.refreshToken!, 'mutation')
   return NextResponse.json({ ok: true })
 }
 
@@ -224,6 +227,6 @@ export async function DELETE(request: NextRequest) {
   await cal.events.delete({ calendarId: calendarId ?? 'primary', eventId })
 
   const supabase = await createClient()
-  await syncCalendarToCache(supabase, origin, conn.refreshToken!)
+  await syncCalendarToCache(supabase, origin, conn.refreshToken!, 'mutation')
   return NextResponse.json({ ok: true })
 }

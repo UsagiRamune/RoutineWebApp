@@ -67,13 +67,16 @@ async function handle(request: Request) {
         .select('expiration').eq('calendar_id', 'primary').maybeSingle()
       logCronError('google_calendar_channels', channelError)
 
+      // renew ล่วงหน้า 6 ชม. (เดิม 2 ชม. — สั้นไปเสี่ยง channel หมดอายุจริงถ้า cron พลาดรอบใดรอบหนึ่ง
+      // เช่น deploy ช่วงนั้นพอดี) registerPrimaryCalendarChannel เป็นคน stop channel เก่าเองอยู่แล้ว
+      // (ดู lib/google/calendar-channel.ts) กันซ้ำค้างฝั่ง Google
       const expiringSoon = !channel ||
-        new Date(channel.expiration).getTime() - Date.now() < 2 * 3600 * 1000
+        new Date(channel.expiration).getTime() - Date.now() < 6 * 3600 * 1000
       results.calendar_channel = expiringSoon
         ? await registerPrimaryCalendarChannel(supabase, origin, conn.refresh_token)
-        : { ok: true, skipped: 'not expiring within 2h', expiration: channel.expiration }
+        : { ok: true, skipped: 'not expiring within 6h', expiration: channel.expiration }
 
-      results.calendar_sync = await syncCalendarToCache(supabase, origin, conn.refresh_token)
+      results.calendar_sync = await syncCalendarToCache(supabase, origin, conn.refresh_token, 'cron')
     }
   } catch (err) {
     results.calendar_channel = { ok: false, reason: `error: ${err instanceof Error ? err.message : 'unknown'}` }

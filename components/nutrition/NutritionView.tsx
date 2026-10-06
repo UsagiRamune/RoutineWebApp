@@ -17,6 +17,7 @@ import Toggle from '@/components/ui/Toggle'
 import SegmentedBar from '@/components/ui/SegmentedBar'
 import MacroGauge from '@/components/nutrition/MacroGauge'
 import { DELETE_HOVER_REVEAL } from '@/lib/uiClasses'
+import { useAiStatus, fmtRetryMinutes } from '@/lib/ai/useAiStatus'
 
 interface Props {
   today: string
@@ -89,6 +90,8 @@ export default function NutritionView({
   const [manualDraft, setManualDraft] = useState<Draft>(emptyDraft)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null)
+  const aiStatus = useAiStatus()
+  const aiDisabled = aiStatus != null && !aiStatus.anyAvailable
 
   function pickPhoto(file: File | null) {
     setPhotoPreviewUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null })
@@ -343,11 +346,17 @@ export default function NutritionView({
                         className="text-[#8A8178] p-1 flex-shrink-0"><X size={14} /></button>
                     </div>
                   )}
-                  <button onClick={runEstimate} disabled={estimating || (!description.trim() && !photoFile)}
+                  <button onClick={runEstimate}
+                    disabled={estimating || aiDisabled || (!description.trim() && !photoFile)}
                     className="w-full mt-2 py-2.5 rounded-lg bg-[#EDEAE0] text-[#171412]
                       text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-1.5">
                     <Sparkles size={14} /> {estimating ? 'กำลังประเมิน...' : 'ให้ AI ตีเป็นแคล'}
                   </button>
+                  {aiDisabled && (
+                    <p className="text-xs text-[#8A8178] mt-2">
+                      AI โควตาเต็มชั่วคราว {fmtRetryMinutes(aiStatus!.nextRetrySec)} — กรอกเองได้ด้านล่าง
+                    </p>
+                  )}
                   {estimateError && <p className="text-xs text-[#E4574A] mt-2">{estimateError}</p>}
 
                   {estimateDraft && (

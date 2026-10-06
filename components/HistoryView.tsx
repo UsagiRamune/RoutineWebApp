@@ -19,6 +19,7 @@ import {
 } from 'recharts'
 import ReactMarkdown from 'react-markdown'
 import { DELETE_HOVER_REVEAL } from '@/lib/uiClasses'
+import { useAiStatus, fmtRetryMinutes } from '@/lib/ai/useAiStatus'
 
 type ViewMode = 'week' | 'month' | 'year'
 
@@ -44,6 +45,8 @@ export default function HistoryView({
     const [aiState, setAiState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
     const [aiText, setAiText] = useState('')
     const [entryError, setEntryError] = useState<{ id: string; message: string } | null>(null)
+    const aiStatus = useAiStatus()
+    const aiDisabled = aiStatus != null && !aiStatus.anyAvailable
 
   // ---------- aggregate ----------
 
@@ -302,13 +305,18 @@ export default function HistoryView({
         <div className="bg-[#201C19] border border-[#332D28] rounded-xl p-4 mb-4">
           <div className="flex items-center justify-between">
             <p className="text-xs text-[#8A8178]">วิเคราะห์ด้วย AI</p>
-            <button onClick={analyze} disabled={aiState === 'loading'}
+            <button onClick={analyze} disabled={aiState === 'loading' || aiDisabled}
               className="text-xs font-semibold px-3 py-1.5 rounded-lg
                 bg-[#EDEAE0] text-[#171412] disabled:opacity-50">
               {aiState === 'loading' ? 'กำลังวิเคราะห์...'
                 : `วิเคราะห์ช่วง${view === 'week' ? 'สัปดาห์' : view === 'month' ? 'เดือน' : '90 วัน'}`}
             </button>
           </div>
+          {aiDisabled && (
+            <p className="text-xs text-[#8A8178] mt-2">
+              AI โควตาเต็มชั่วคราว {fmtRetryMinutes(aiStatus!.nextRetrySec)}
+            </p>
+          )}
           {aiState === 'done' && (
             <div className="mt-3 text-sm leading-relaxed
               [&_h3]:font-semibold [&_h3]:mt-3 [&_h3]:mb-1
